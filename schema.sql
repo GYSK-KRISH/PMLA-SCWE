@@ -49,11 +49,18 @@ CREATE TABLE IF NOT EXISTS Cyber_Audit (
     student_id INT NOT NULL,
     password_strength INT DEFAULT 0,
     screen_time_hours FLOAT DEFAULT 0,
+    daily_screen_time FLOAT DEFAULT 0,
+    study_screen_time FLOAT DEFAULT 0,
+    recreational_screen_time FLOAT DEFAULT 0,
+    sleep_duration FLOAT DEFAULT 8,
+    digital_distraction_level INT DEFAULT 0,
+    cyber_safety_awareness INT DEFAULT 0,
     netiquette_score INT DEFAULT 0,
     privacy_awareness INT DEFAULT 0,
     e_waste_awareness INT DEFAULT 0,
     wellness_score FLOAT DEFAULT 0,
     audit_date DATE,
+    remarks VARCHAR(255),
     FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
 );
 

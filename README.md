@@ -9,38 +9,43 @@ If you want the full step-by-step version that explains how to run the project a
 ## What This Project Does
 
 The project currently supports:
-
-- student management
-- login and authentication
-- attendance tracking
-- assessment entry and history
-- basic analytics scaffolding
-- schema creation and sample data seeding
-- SQLite fallback when MySQL is not available
-
-The long-term package also includes reporting, graphs, export utilities, and teacher-facing analytics views.
+- **Student CRUD Operations**: Add, update, view, and delete student profiles.
+- **Admin Login Hashing**: Secure hashed administrator access via console.
+- **Attendance Registry**: Record present, absent, or leave details with percentage counters.
+- **Diagnostic Assessments**: Track marks obtained vs max marks for academic quizzes.
+- **Weekly Progress Logs**: Record weekly checkpoints to track improvement curves.
+- **Predictive Analytics**: Runs mathematical linear regression trends and risk category mappings.
+- **Visual Charting & Exporters**: Outputs matplotlib figures and CSV/text report documents.
+- **Database Fallbacks**: Automatically falls back to SQLite if local MySQL service is inactive.
+- **Explainable AI Assistant**: Type or speak voice questions to query context-rich student reports.
 
 ## Project Structure
 
 - `PMLA_SCWE/` - Python package containing the application code
-- `schema.sql` - MySQL schema for the project database
-- `requirements.txt` - Python dependencies
-- `documentation/` - project notes, connection instructions, and report material
+  - `database.py` - handles MySQL connection and SQLite fallback logic.
+  - `analytics.py` - handles mathematical computations (LHS, linear regression, averages).
+  - `recommendation.py` - flags rule-based teacher alerts and risk classifications.
+  - `graphs.py` - renders academic trends, wellness stats, and class comparisons.
+  - `reports.py` - builds formatted student/class txt documents and CSV files.
+  - `ai_assistant.py` - manages OpenAI/Gemini clients and voice synthesis.
+  - `main.py` - routes command-line loops and submenu layouts.
+- `schema.sql` - MySQL database script for schema creation.
+- `requirements.txt` - Python project package dependencies.
+- `RUN_AND_EXPLAIN.md` - Comprehensive student run instructions and Viva Q&As.
 
 ## Requirements
 
-- Python 3.15 or compatible Python 3.x installation
-- MySQL Server if you want to use the MySQL connection path
-- MySQL Workbench for schema setup and manual inspection
+- Python 3.14+ or compatible Python 3.x installation
+- MySQL Server & Workbench (Optional - Fallback database included)
 - Python packages listed in `requirements.txt`
 
 ### Python dependencies
 
 The project uses:
-
-- pandas
-- matplotlib
-- mysql-connector-python
+- `matplotlib` (data visualization)
+- `mysql-connector-python` (MySQL driver)
+- `openai` & `google-genai` (AI Assistant APIs)
+- `SpeechRecognition` & `pyttsx3` (voice command recording and voice synthesis)
 
 ## Database Overview
 
@@ -148,6 +153,7 @@ When the app starts, it shows the main menu:
 - List Students
 - Attendance
 - Assessment
+- Predictive Analytics & Insights
 - Exit
 
 ## Default App Login
@@ -193,6 +199,12 @@ Provides options to:
 - add a diagnostic assessment
 - view assessment history
 
+### Predictive Analytics & Insights
+
+Provides statistical predictive analytics and risk classification:
+- **View Single Student Analytics**: Calculates a student's performance trend using simple linear regression, estimates next week's score, computes a weighted Learning Health Score, and classifies risk levels.
+- **Class-wide Risk Report**: Aggregates high-risk students and active alerts (such as declining weekly trends, wellness concerns, or critical attendance) for proactive teacher intervention.
+
 ## SQLite Fallback
 
 If MySQL is not available, the application falls back to a local SQLite database file named `pmla_scwe_fallback.db`.
@@ -233,14 +245,42 @@ The SQLite fallback should still allow the app to run. Check the generated file 
 
 ## Current Status
 
-The project is now functional with:
+The project is now fully functional with:
+- Schema creation & MySQL Workbench setup
+- SQLite fallback database support
+- Administrator login authentication
+- Student CRUD operations
+- Attendance and diagnostic assessment tracking
+- Matplotlib visualizations (academic trends, attendance, cyber-wellness, learning health)
+- Data export features (text reports and CSV spreadsheets)
+- Statistical predictive models (regression forecasting) & risk classification
+- **AI Assistant Integration (Q&A, context-aware student analysis, suggestions)**
+- **Voice Command Interface (Speech-to-Text & optional Text-to-Speech)**
 
-- schema creation
-- MySQL Workbench setup
-- database fallback support
-- working login
-- student CRUD basics
-- attendance and assessment features
-- sample data seeding
+---
 
-Next development areas are analytics, graphing, reporting, and export workflows.
+## AI Assistant & Voice Command Integration
+
+PMLA-SCWE features a built-in AI Assistant module (`ai_assistant.py`) which acts as an explainable decision-support engine. 
+
+### What it Does
+1. **General Q&A**: Answers conceptual questions about micro-learning and digital wellbeing.
+2. **Contextual Student Analysis**: Reads current analytics data (academics, weekly trends, attendance, cyber-wellness score, risk levels) and explains the student's status.
+3. **Actionable Suggestions**: Recommends practical educational interventions for the student.
+4. **Voice Commands**: Captures speech from your microphone, converts it to text, processes it through the AI, and optional reads responses aloud using text-to-speech.
+
+### How to Configure API Keys
+To use the AI features, you must configure either OpenAI or Google Gemini. 
+1. Create a `.env` file in the project root directory (copy `.env.example`).
+2. Add your API key:
+   - For OpenAI: `OPENAI_API_KEY=your_key_here`
+   - For Gemini: `GEMINI_API_KEY=your_key_here`
+3. The app will automatically read the keys from the environment. **Do not commit your `.env` file to git.**
+
+### Running Voice Commands
+Make sure you install the required voice libraries:
+```powershell
+pip install SpeechRecognition pyttsx3
+```
+*Note: Voice features will fall back gracefully to keyboard entry if a microphone is not connected or pyttsx3 is not installed.*
+

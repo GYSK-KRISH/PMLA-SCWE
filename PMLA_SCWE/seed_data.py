@@ -85,7 +85,7 @@ def _fetch_ids(cursor, table: str, column: str) -> set[int]:
 
 
 def seed_database(target_students: int = 100) -> dict[str, int]:
-    """Seed the database with 100 students if fewer than that already exist."""
+    """Wipes the database, resets AUTO_INCREMENT, and seeds exactly target_students with rich profiles."""
     initialize_database_from_file("schema.sql")
 
     conn = get_connection()
@@ -94,20 +94,43 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
     rng = Random(42)
 
     try:
+        # Disable foreign keys and wipe all tables to reset AUTO_INCREMENT to 1
+        try:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        except Exception:
+            pass
+            
+        tables = [
+            "Attendance", "Diagnostic_Logs", "Weekly_Progress", "Cyber_Audit", 
+            "Achievements", "Activity_Log", "Reports_Metadata", "Students", "Admin_Login", "Learning_Objectives"
+        ]
+        for t in tables:
+            cursor.execute(f"DELETE FROM {t}")
+            try:
+                cursor.execute(f"ALTER TABLE {t} AUTO_INCREMENT = 1")
+            except Exception:
+                pass
+                
+        try:
+            cursor.execute("DELETE FROM sqlite_sequence")
+        except Exception:
+            pass
+            
+        try:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        except Exception:
+            pass
+
         _ensure_admin(cursor, placeholder)
         _ensure_objectives(cursor, placeholder)
-
-        existing_students = _count_rows("Students")
-        to_add = max(0, target_students - existing_students)
-        start_index = existing_students + 1
 
         student_sql = (
             f"INSERT INTO Students (first_name, last_name, class_section, dob, gender, email, phone, enrollment_date) "
             f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
 
-        for offset in range(to_add):
-            number = start_index + offset
+        for offset in range(target_students):
+            number = offset + 1
             first_name = FIRST_NAMES[offset % len(FIRST_NAMES)]
             last_name = LAST_NAMES[offset % len(LAST_NAMES)]
             class_section = CLASSES[offset % len(CLASSES)]
@@ -139,14 +162,6 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
         cursor.execute("SELECT objective_id FROM Learning_Objectives ORDER BY objective_id")
         objective_ids = [int(row[0]) for row in cursor.fetchall()]
 
-        existing_assessments = _fetch_ids(cursor, "Diagnostic_Logs", "student_id")
-        existing_attendance = _fetch_ids(cursor, "Attendance", "student_id")
-        existing_audit = _fetch_ids(cursor, "Cyber_Audit", "student_id")
-        existing_progress = _fetch_ids(cursor, "Weekly_Progress", "student_id")
-        existing_achievements = _fetch_ids(cursor, "Achievements", "student_id")
-        existing_activity = _fetch_ids(cursor, "Activity_Log", "log_id") if _count_rows("Activity_Log") else set()
-        existing_reports = _fetch_ids(cursor, "Reports_Metadata", "student_id")
-
         assessment_sql = (
             f"INSERT INTO Diagnostic_Logs (student_id, objective_id, score_obtained, max_score, test_date, time_taken_minutes) "
             f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
@@ -173,55 +188,80 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
             objective_id = objective_ids[index % len(objective_ids)]
             base_day = date.today() - timedelta(days=index % 30)
 
-            if student_id not in existing_assessments:
-                cursor.execute(
-                    assessment_sql,
-                    (
-                        student_id,
-                        objective_id,
-                        55 + (index * 7) % 46,
-                        100,
-                        base_day.isoformat(),
-                        25 + (index % 20),
-                    ),
-                )
+            # 1. Assessment Logs (Academic Average)
+            cursor.execute(
+                assessment_sql,
+                (
+                    student_id,
+                    objective_id,
+                    55 + (index * 7) % 46,
+                    100,
+                    base_day.isoformat(),
+                    25 + (index % 20),
+                ),
+            )
 
-            if student_id not in existing_attendance:
+            # 2. Multi-day Attendance (Calculates realistic percentage)
+            for d in range(10):
+                is_present = True
+                if index % 5 == 0 and d in [2, 5]:  # 80% attendance
+                    is_present = False
+                elif index % 6 == 0 and d in [1, 3, 5, 7]:  # 60% attendance (High Risk)
+                    is_present = False
+                status = "P" if is_present else "A"
                 cursor.execute(
                     attendance_sql,
                     (
                         student_id,
-                        (date.today() - timedelta(days=index % 14)).isoformat(),
-                        "P" if index % 5 != 0 else "A",
+                        (date.today() - timedelta(days=d)).isoformat(),
+                        status,
                     ),
                 )
 
-            if student_id not in existing_audit:
-                cursor.execute(
-                    audit_sql,
-                    (
-                        student_id,
-                        10 + (index % 10),
-                        round(2.0 + (index % 8) * 0.5, 1),
-                        10 + (index % 10),
-                        12 + (index % 8),
-                        11 + (index % 7),
-                        60 + (index % 35),
-                        date.today().isoformat(),
-                    ),
-                )
+            # 3. Cyber-Wellness habits
+            if index % 3 == 0:
+                screen_time = 7.5
+                wellness_score = 45.0
+            elif index % 3 == 1:
+                screen_time = 3.0
+                wellness_score = 95.0
+            else:
+                screen_time = 5.0
+                wellness_score = 75.0
 
-            if student_id not in existing_progress:
+            cursor.execute(
+                audit_sql,
+                (
+                    student_id,
+                    10 + (index % 10),
+                    screen_time,
+                    10 + (index % 10),
+                    12 + (index % 8),
+                    11 + (index % 7),
+                    wellness_score,
+                    date.today().isoformat(),
+                ),
+            )
+
+            # 4. Multi-week progress logs (For Linear Regression Forecasting)
+            if index % 3 == 0:
+                scores = [80, 75, 70, 65]  # declining trend
+            elif index % 3 == 1:
+                scores = [60, 65, 70, 75]  # improving trend
+            else:
+                scores = [70, 71, 70, 72]  # stable trend
+            for w, sc in enumerate(scores):
                 cursor.execute(
                     progress_sql,
                     (
                         student_id,
-                        (date.today() - timedelta(days=7)).isoformat(),
-                        60 + (index % 40),
+                        (date.today() - timedelta(days=(4-w)*7)).isoformat(),
+                        sc,
                     ),
                 )
 
-            if student_id not in existing_achievements and index % 4 == 0:
+            # 5. Achievements
+            if index % 4 == 0:
                 cursor.execute(
                     achievement_sql,
                     (
@@ -232,16 +272,16 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
                     ),
                 )
 
-            if student_id not in existing_reports:
-                cursor.execute(
-                    report_sql,
-                    (
-                        student_id,
-                        "Report Card",
-                        date.today().isoformat(),
-                        f"reports/student_{student_id:03d}.txt",
-                    ),
-                )
+            # 6. Reports Metadata
+            cursor.execute(
+                report_sql,
+                (
+                    student_id,
+                    "Report Card",
+                    date.today().isoformat(),
+                    f"reports/student_{student_id:03d}.txt",
+                ),
+            )
 
             cursor.execute(activity_sql, (f"Seeded sample record for student {student_id}",))
 

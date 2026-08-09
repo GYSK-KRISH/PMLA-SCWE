@@ -99,7 +99,8 @@ def execute_query(query: str, parameters: Iterable[Any] | None = None) -> list[d
     params = tuple(parameters or ())
     if _HAS_MYSQL:
         try:
-            conn = _mysql_connection()
+            cfg = get_connection_info()
+            conn = _mysql_connection(cfg.database)
             cursor = conn.cursor(dictionary=True)
             cursor.execute(query, params)
             rows = cursor.fetchall()
@@ -125,7 +126,8 @@ def execute_non_query(query: str, parameters: Iterable[Any] | None = None) -> in
     params = tuple(parameters or ())
     if _HAS_MYSQL:
         try:
-            conn = _mysql_connection()
+            cfg = get_connection_info()
+            conn = _mysql_connection(cfg.database)
             cursor = conn.cursor()
             cursor.execute(query, params)
             affected = cursor.rowcount
@@ -174,7 +176,10 @@ def initialize_database(schema_path: str | None = None) -> bool:
                 sql = fh.read()
             for statement in sql.split(";"):
                 statement = statement.strip()
-                if not statement or statement.startswith("--"):
+                while statement.startswith("--") or statement.startswith("#"):
+                    lines = statement.split("\n", 1)
+                    statement = lines[1].strip() if len(lines) > 1 else ""
+                if not statement:
                     continue
                 try:
                     cursor.execute(statement)
@@ -211,7 +216,10 @@ def initialize_database_from_file(sql_file_path: str) -> bool:
                 sql = fh.read()
             for statement in sql.split(";"):
                 statement = statement.strip()
-                if not statement or statement.startswith("--"):
+                while statement.startswith("--") or statement.startswith("#"):
+                    lines = statement.split("\n", 1)
+                    statement = lines[1].strip() if len(lines) > 1 else ""
+                if not statement:
                     continue
                 try:
                     cursor.execute(statement)
@@ -276,11 +284,18 @@ def _sqlite_schema() -> str:
       student_id INTEGER NOT NULL,
       password_strength INTEGER DEFAULT 0,
       screen_time_hours REAL DEFAULT 0,
+      daily_screen_time REAL DEFAULT 0,
+      study_screen_time REAL DEFAULT 0,
+      recreational_screen_time REAL DEFAULT 0,
+      sleep_duration REAL DEFAULT 8,
+      digital_distraction_level INTEGER DEFAULT 0,
+      cyber_safety_awareness INTEGER DEFAULT 0,
       netiquette_score INTEGER DEFAULT 0,
       privacy_awareness INTEGER DEFAULT 0,
       e_waste_awareness INTEGER DEFAULT 0,
       wellness_score REAL DEFAULT 0,
       audit_date TEXT,
+      remarks TEXT,
       FOREIGN KEY (student_id) REFERENCES Students(student_id)
     );
     CREATE TABLE IF NOT EXISTS Weekly_Progress (

@@ -1,3 +1,7 @@
 pandas
 matplotlib
 mysql-connector-python
+openai
+google-genai
+SpeechRecognition
+pyttsx3

@@ -6,7 +6,7 @@ APP_VERSION = "2.0"
 DATABASE_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "",
+    "password": "12345678",
     "database": "pmla_scwe",
     "port": 3306,
 }
