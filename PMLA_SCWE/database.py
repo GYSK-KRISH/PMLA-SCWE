@@ -98,17 +98,22 @@ def execute_query(query: str, parameters: Iterable[Any] | None = None) -> list[d
     """Execute a SELECT-style query and return rows as dictionaries."""
     params = tuple(parameters or ())
     if _HAS_MYSQL:
+        use_sqlite = False
         try:
             cfg = get_connection_info()
             conn = _mysql_connection(cfg.database)
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            cursor.close()
-            conn.close()
-            return [dict(row) for row in rows]
         except Exception:
-            pass
+            use_sqlite = True
+
+        if not use_sqlite:
+            cursor = conn.cursor(dictionary=True)
+            try:
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                return [dict(row) for row in rows]
+            finally:
+                cursor.close()
+                conn.close()
 
     conn = _sqlite_connection()
     try:
@@ -125,18 +130,23 @@ def execute_non_query(query: str, parameters: Iterable[Any] | None = None) -> in
     """Execute INSERT/UPDATE/DELETE and return affected rowcount."""
     params = tuple(parameters or ())
     if _HAS_MYSQL:
+        use_sqlite = False
         try:
             cfg = get_connection_info()
             conn = _mysql_connection(cfg.database)
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            affected = cursor.rowcount
-            conn.commit()
-            cursor.close()
-            conn.close()
-            return affected
         except Exception:
-            pass
+            use_sqlite = True
+
+        if not use_sqlite:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(query, params)
+                affected = cursor.rowcount
+                conn.commit()
+                return affected
+            finally:
+                cursor.close()
+                conn.close()
 
     conn = _sqlite_connection()
     try:
@@ -275,9 +285,9 @@ def _sqlite_schema() -> str:
       score_obtained REAL NOT NULL,
       max_score REAL DEFAULT 100,
       test_date TEXT,
-            time_taken_minutes INTEGER,
-      FOREIGN KEY (student_id) REFERENCES Students(student_id),
-      FOREIGN KEY (objective_id) REFERENCES Learning_Objectives(objective_id)
+      time_taken_minutes INTEGER,
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+      FOREIGN KEY (objective_id) REFERENCES Learning_Objectives(objective_id) ON DELETE SET NULL
     );
     CREATE TABLE IF NOT EXISTS Cyber_Audit (
       audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -296,14 +306,14 @@ def _sqlite_schema() -> str:
       wellness_score REAL DEFAULT 0,
       audit_date TEXT,
       remarks TEXT,
-      FOREIGN KEY (student_id) REFERENCES Students(student_id)
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS Weekly_Progress (
       week_id INTEGER PRIMARY KEY AUTOINCREMENT,
       student_id INTEGER NOT NULL,
       week_start TEXT NOT NULL,
       score REAL DEFAULT 0,
-      FOREIGN KEY (student_id) REFERENCES Students(student_id)
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS Achievements (
       achievement_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -311,14 +321,14 @@ def _sqlite_schema() -> str:
       badge_name TEXT NOT NULL,
       date_awarded TEXT,
       remarks TEXT,
-      FOREIGN KEY (student_id) REFERENCES Students(student_id)
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS Attendance (
       attendance_id INTEGER PRIMARY KEY AUTOINCREMENT,
       student_id INTEGER NOT NULL,
       attendance_date TEXT NOT NULL,
       status TEXT NOT NULL,
-      FOREIGN KEY (student_id) REFERENCES Students(student_id)
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS Activity_Log (
       log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -330,6 +340,7 @@ def _sqlite_schema() -> str:
       student_id INTEGER,
       report_type TEXT NOT NULL,
       generated_at TEXT,
-      file_path TEXT
+      file_path TEXT,
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE SET NULL
     );
     """
