@@ -1,7 +1,7 @@
 """Shared configuration for the PMLA-SCWE application."""
 
 APP_NAME = "PMLA-SCWE"
-APP_VERSION = "2.0"
+APP_VERSION = "2.0.0"
 
 DATABASE_CONFIG = {
     "host": "localhost",
