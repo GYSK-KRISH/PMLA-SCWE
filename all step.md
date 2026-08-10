@@ -146,25 +146,25 @@ Ask conceptual or data-specific questions.
 
 ---
 
-## Part B: School Installation Procedures (Deep Instructions)
+## Part B: PC Installation Procedures (Deep Instructions)
 
-### Scenario A: Working with an Offline School PC (SQLite Fallback)
-Many school computers lack active MySQL Server setups. Use this process to run the app with SQLite:
-1. **Copy folder via USB**: Copy the entire extracted project folder (including `pmla_scwe_fallback.db`) to the Desktop of the school PC.
+### Scenario A: Working Offline (SQLite Fallback)
+If the target computer lacks an active MySQL Server setup, use this process to run the app with SQLite:
+1. **Copy folder via USB**: Copy the entire extracted project folder (including `pmla_scwe_fallback.db`) to the Desktop of the target PC.
 2. **Execute directly**:
    When you run `python -m PMLA_SCWE.main`, the system notices that MySQL connection fails, prints a message, and automatically connects to SQLite using `pmla_scwe_fallback.db` in your root folder. No server setup or Workbench config is required!
 
 ---
 
 ### Scenario B: Offline Dependency Installation
-If the school computer has no internet access to download Python packages:
+If the target computer has no internet access to download Python packages:
 1. **At home (with internet)**:
    Create a folder called `wheels/` inside your project directory and run:
    ```powershell
    pip download -r requirements.txt -d ./wheels
    ```
    This downloads the pre-compiled `.whl` files for all dependencies (Matplotlib, MySQL connector, openai, speechrecognition, pyttsx3, etc.).
-2. **At school (offline)**:
+2. **On the offline PC**:
    Plug in your USB drive, open the terminal in the project folder, and run:
    ```powershell
    pip install --no-index --find-links=./wheels -r requirements.txt

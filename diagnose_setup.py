@@ -103,7 +103,7 @@ def run_diagnostics():
             print("\n   --> ACTION REQUIRED to install missing packages:")
             print("      Ensure your internet is active and run:")
             print("         pip install -r requirements.txt")
-            print("      If your school computer is OFFLINE, run this in the terminal with your USB drive wheels:")
+            print("      If your computer is OFFLINE, run this in the terminal with your USB drive wheels:")
             print("         pip install --no-index --find-links=./wheels -r requirements.txt\n")
 
     # ----------------------------------------------------
@@ -118,12 +118,13 @@ def run_diagnostics():
     if mysql_port_open:
         print_status("PASS", "MySQL server is listening on port 3306.", COLOR_GREEN)
     else:
-        print_status("WARNING", "MySQL server is NOT listening on port 3306!", COLOR_YELLOW)
-        print("   * Note: The application will automatically fall back to SQLite.")
-        print("   --> ACTION REQUIRED to set up MySQL (if you want to use MySQL instead of SQLite fallback):")
-        print("      1. Verify MySQL Community Server is installed on your school PC.")
-        print("      2. Verify MySQL service is started (open Services in Windows, find 'MySQL80', and click Start).")
-        has_warnings = True
+        print_status("FAIL", "MySQL server is NOT listening on port 3306! (Required for Syllabus)", COLOR_RED)
+        print("   --> CRITICAL: MySQL connectivity is a core evaluation requirement for the syllabus.")
+        print("                 Do not demonstrate with SQLite unless explicitly permitted.")
+        print("   --> ACTION REQUIRED:")
+        print("      1. Verify MySQL Community Server is installed on the target PC.")
+        print("      2. Start the MySQL service: open Windows Services (services.msc), find 'MySQL80', and click Start.")
+        has_failures = True
 
     # ----------------------------------------------------
     # 5. Database Config and Schema Check

@@ -2,7 +2,7 @@
 
 Predictive Micro-Learning Analytics and Student Cyber-Wellbeing Engine.
 
-PMLA-SCWE is a school analytics project package built for CBSE-style project work. It combines a MySQL-backed data model, a modular Python application, and supporting documentation for students, teachers, and evaluators.
+PMLA-SCWE is a student analytics project package built for CBSE-style project work. It combines a MySQL-backed data model, a modular Python application, and supporting documentation for students, teachers, and evaluators.
 
 If you want the full step-by-step version that explains how to run the project and how to present it in viva, open [RUN_AND_EXPLAIN.md](RUN_AND_EXPLAIN.md).
 If you are deploying this project for the first time or setting up VS Code, VENV, and MySQL locally, please read the [Desktop Setup Guide](DESKTOP_SETUP.md). You can run `python diagnose_setup.py` to identify and resolve any environment errors.

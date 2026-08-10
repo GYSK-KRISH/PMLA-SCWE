@@ -1,6 +1,6 @@
-# PMLA-SCWE: Comprehensive School Presentation & Running Guide
+# PMLA-SCWE: Comprehensive Presentation & Running Guide
 
-This guide is designed to help you run the **PMLA-SCWE** (Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine) application on **any computer (including your school's computer)** and explain every line of code, math formula, and database concept to your teacher in a deep, impressive manner to secure full marks.
+This guide is designed to help you run the **PMLA-SCWE** (Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine) application on **any computer** and explain every line of code, math formula, and database concept to your teacher in a deep, impressive manner to secure full marks.
 
 ---
 
@@ -106,26 +106,26 @@ Students are dynamically grouped based on LHS, Attendance, and Progress:
 
 ---
 
-## 5. Setting up & Running in a School Computer Environment
+## 5. Setting up & Running in a Desktop Computer Environment
 
-School computers are often **offline** or **restrictive** (no admin access, no MySQL server, and no internet to download pip libraries). The project is built to handle this seamlessly.
+Target computers are often **offline** or **restrictive** (no admin access, no MySQL server, and no internet to download pip libraries). The project is built to handle this seamlessly.
 
-### Scenario A: Offline School Computer (Using SQLite Fallback)
-If the school computer does not have MySQL Server installed or running:
-1. **Copy the Entire Project Folder**: Copy the project folder (including `pmla_scwe_fallback.db`) to a flash drive and paste it onto the school computer.
+### Scenario A: Offline Computer (Using SQLite Fallback)
+If the target computer does not have MySQL Server installed or running:
+1. **Copy the Entire Project Folder**: Copy the project folder (including `pmla_scwe_fallback.db`) to a flash drive and paste it onto the target computer.
 2. **Execute Directly using SQLite**:
    The application detects that MySQL is offline and automatically loads/creates the database tables inside `pmla_scwe_fallback.db` in the project root.
 3. **No Setup Required**: You do not need to install MySQL, configure Workbench, or type a database password! The SQLite engine is built directly into Python.
 
 ### Scenario B: Offline Package Installation
-If the school computer does not have the required libraries (like `matplotlib` or `mysql-connector-python`) and has no internet connection:
-1. **Download wheels on your home computer**:
+If the target computer does not have the required libraries (like `matplotlib` or `mysql-connector-python`) and has no internet connection:
+1. **Download wheels on a machine with internet**:
    On your home computer (connected to the internet), create a folder `wheels/` and run:
    ```powershell
    pip download -r requirements.txt -d ./wheels
    ```
-2. **Copy the wheels folder**: Transfer the `wheels/` directory to the school computer via a USB drive.
-3. **Install Offline on the School Computer**:
+2. **Copy the wheels folder**: Transfer the `wheels/` directory to the target computer via a USB drive.
+3. **Install Offline on the Offline Computer**:
    Open a terminal in the project folder and run:
    ```powershell
    pip install --no-index --find-links=./wheels -r requirements.txt
@@ -133,8 +133,8 @@ If the school computer does not have the required libraries (like `matplotlib` o
    This will install Matplotlib, MySQL connectors, and helper libraries directly from the local files without requiring the internet.
 
 ### Scenario C: Standard MySQL Workbench Environment (Online/Connected)
-If the school computer has a running MySQL instance:
-1. **Configure Connection**: Edit the `PMLA_SCWE/config.py` file to match the school computer's MySQL password.
+If the target computer has a running MySQL instance:
+1. **Configure Connection**: Edit the `PMLA_SCWE/config.py` file to match the local computer's MySQL password.
 2. **Run Schema**: Open MySQL Workbench, open the file `schema.sql`, and execute it to create the database.
 3. **Run Seeder**: Seed the database with 100 students:
    ```powershell
