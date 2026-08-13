@@ -63,10 +63,23 @@ def add_audit():
         if not date_str:
             date_str = datetime.date.today().isoformat()
 
-        success = wellness_service.add_cyber_wellness_audit(
-            student_id, daily_screen, study_screen, rec_screen, sleep,
-            distraction, safety, remarks, date_str
-        )
+        payload = {
+            "student_id": student_id,
+            "daily_screen_time": daily_screen,
+            "study_screen_time": study_screen,
+            "recreational_screen_time": rec_screen,
+            "sleep_duration": sleep,
+            "digital_distraction_level": distraction,
+            "cyber_safety_awareness": safety,
+            "remarks": remarks,
+            "audit_date": date_str
+        }
+
+        errors = wellness_service.validate_audit_data(payload)
+        if errors:
+            return jsonify({"success": False, "message": errors[0]})
+
+        success = wellness_service.add_cyber_audit(payload)
 
         if success:
             return jsonify({"success": True, "message": "Cyber audit submitted successfully!"})
