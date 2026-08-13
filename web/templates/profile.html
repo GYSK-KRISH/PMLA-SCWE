@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - PMLA-SCWE{% endblock %}
+{% block header_title %}Account Profile{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: 1fr;">
+  <!-- Profile Panel Card -->
+  <div class="dashboard-card" style="max-width: 600px; margin: 0 auto;">
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px;">
+      <div style="width: 80px; height: 80px; border-radius: 50%; background-color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; color: #FFFFFF;">
+        {{ session.get('full_name', 'Admin')[0]|upper }}
+      </div>
+      <div>
+        <h2 style="margin: 0; color: #FFFFFF; font-size: 22px;">{{ session.get('full_name') }}</h2>
+        <span style="color: var(--color-primary); font-size: 13px; font-weight: bold;">{{ session.get('role') }} Account</span>
+      </div>
+    </div>
+
+    <!-- Alert Messaging -->
+    {% with messages = get_flashed_messages(category_filter=["success", "error"]) %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div style="padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; font-size: 13px; background-color: #272727; color: #34A853; border: 1px solid #34A853;">
+            {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div style="display: flex; flex-direction: column; gap: 15px; border-top: 1px solid #2A2A2A; padding-top: 20px; margin-bottom: 25px;">
+      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+        <span style="color: #717171;">System Username</span>
+        <span style="color: #FFFFFF; font-weight: bold;">@{{ session.get('username') }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+        <span style="color: #717171;">Account Status</span>
+        <span style="color: #34A853; font-weight: bold;">● Active</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+        <span style="color: #717171;">Local Environment Mode</span>
+        {% if db_status.backend == 'MySQL' %}
+          <span style="color: #34A853; font-weight: bold;">MySQL Network Mode</span>
+        {% else %}
+          <span style="color: #FFD600; font-weight: bold;">SQLite Fallback Local Mode</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <a href="{{ url_for('settings.change_password') }}" class="btn-primary" style="text-align: center; text-decoration: none; padding: 10px 20px; font-size: 12px;">🔒 CHANGE PASSWORD</a>
+      {% if session.get('role') == 'Admin' %}
+        <a href="{{ url_for('settings.users') }}" class="quick-action-btn" style="text-align: center; max-width: 200px; padding: 10px; border-radius: 4px;">👥 MANAGE ACCOUNTS</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

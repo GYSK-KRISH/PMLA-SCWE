@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}User Accounts - PMLA-SCWE{% endblock %}
+{% block header_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">
+  <!-- Left Side: User list -->
+  <div class="dashboard-card">
+    <h2 style="color: #FFFFFF; font-size: 16px; margin-bottom: 20px; font-weight: bold;">👥 SYSTEM ACCOUNTS ROSTER</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(category_filter=["success", "error"]) %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div style="padding: 10px 14px; border-radius: 6px; margin-bottom: 15px; font-weight: bold; font-size: 12px; background-color: #272727; color: #FFFFFF; border: 1px solid var(--color-primary);">
+            {{ msg }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+      <thead>
+        <tr style="border-bottom: 1px solid #2A2A2A; color: #717171;">
+          <th style="padding: 10px;">User Account</th>
+          <th style="padding: 10px;">Access Role</th>
+          <th style="padding: 10px;">Status</th>
+          <th style="padding: 10px; text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr style="border-bottom: 1px solid #1C1C1C; color: #FFFFFF;">
+            <td style="padding: 12px 10px;">
+              <span style="font-weight: bold; display: block;">{{ u.full_name }}</span>
+              <span style="color: #717171; font-size: 11px;">@{{ u.username }}</span>
+            </td>
+            <td style="padding: 12px 10px; font-weight: 500;">{{ u.role }}</td>
+            <td style="padding: 12px 10px;">
+              {% if u.status == 'Active' %}
+                <span style="color: #34A853; font-weight: bold;">● Active</span>
+              {% else %}
+                <span style="color: #FF4D4D; font-weight: bold;">● Inactive</span>
+              {% endif %}
+            </td>
+            <td style="padding: 12px 10px; text-align: right;">
+              {% if u.username != 'admin' %}
+                <!-- Simple inline update toggles for quick action -->
+                <form method="POST" action="{{ url_for('settings.edit_user', user_id=u.user_id) }}" style="display: inline-block; margin-right: 5px;">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <input type="hidden" name="full_name" value="{{ u.full_name }}">
+                  <input type="hidden" name="role" value="{{ 'Teacher' if u.role == 'Viewer' else ('Viewer' if u.role == 'Admin' else 'Admin') }}">
+                  <input type="hidden" name="status" value="{{ u.status }}">
+                  <button type="submit" class="quick-action-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; display: inline-block;">Change Role</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('settings.edit_user', user_id=u.user_id) }}" style="display: inline-block; margin-right: 5px;">
+                  <input type="hidden" name="username" value="{{ u.username }}">
+                  <input type="hidden" name="full_name" value="{{ u.full_name }}">
+                  <input type="hidden" name="role" value="{{ u.role }}">
+                  <input type="hidden" name="status" value="{{ 'Inactive' if u.status == 'Active' else 'Active' }}">
+                  <button type="submit" class="quick-action-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; display: inline-block;">Toggle Active</button>
+                </form>
+
+                <a href="{{ url_for('settings.delete_user', user_id=u.user_id) }}" style="color: #FF4D4D; text-decoration: none; font-weight: bold; font-size: 12px; padding: 4px 8px; border: 1px solid #3A1A1A; border-radius: 4px; background-color: #1E1010; transition: 0.2s;" onclick="return confirm('Confirm deletion of user account?');">Delete</a>
+              {% else %}
+                <span style="color: #717171; font-style: italic;">Root System Account</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Right Side: Register new user -->
+  <div class="dashboard-card">
+    <h2 style="color: #FFFFFF; font-size: 16px; margin-bottom: 20px; font-weight: bold; border-bottom: 1px solid #2A2A2A; padding-bottom: 10px;">➕ REGISTER USER</h2>
+
+    <form method="POST" action="{{ url_for('settings.add_user') }}">
+      <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="color: #AAAAAA; font-size: 11px; font-weight: bold;">Username (Unique)</label>
+          <input type="text" name="username" required style="background-color: #121212; border: 1px solid #2A2A2A; color: #FFFFFF; padding: 8px 12px; border-radius: 6px; font-size: 13px;">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="color: #AAAAAA; font-size: 11px; font-weight: bold;">Full Name</label>
+          <input type="text" name="full_name" required style="background-color: #121212; border: 1px solid #2A2A2A; color: #FFFFFF; padding: 8px 12px; border-radius: 6px; font-size: 13px;">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="color: #AAAAAA; font-size: 11px; font-weight: bold;">Initial Password</label>
+          <input type="password" name="password" required style="background-color: #121212; border: 1px solid #2A2A2A; color: #FFFFFF; padding: 8px 12px; border-radius: 6px; font-size: 13px;">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="color: #AAAAAA; font-size: 11px; font-weight: bold;">Access Privilege Role</label>
+          <select name="role" style="background-color: #121212; border: 1px solid #2A2A2A; color: #FFFFFF; padding: 8px 12px; border-radius: 6px; font-size: 13px;">
+            <option value="Teacher">Teacher</option>
+            <option value="Admin">Admin</option>
+            <option value="Viewer">Viewer</option>
+          </select>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="color: #AAAAAA; font-size: 11px; font-weight: bold;">Status</label>
+          <select name="status" style="background-color: #121212; border: 1px solid #2A2A2A; color: #FFFFFF; padding: 8px 12px; border-radius: 6px; font-size: 13px;">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" style="width: 100%; padding: 10px; font-size: 12px;">SAVE USER ACCOUNT</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

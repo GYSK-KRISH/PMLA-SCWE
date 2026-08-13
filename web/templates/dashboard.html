@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE School Dashboard{% endblock %}
+{% block header_title %}Dashboard Command Center{% endblock %}
+
+{% block content %}
+<!-- Friendly Welcome Section -->
+<div style="margin-bottom: 25px; padding-bottom: 10px;">
+  <h2 style="font-size: 24px; font-weight: 800; color: #FFFFFF; margin: 0;">Good Morning, Admin 👋</h2>
+  <span style="font-size: 13px; color: var(--color-text-muted);">Here's what's happening with your students today.</span>
+</div>
+
+<!-- Four KPI Cards Grid -->
+<div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+  <!-- Students KPI -->
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/students';" style="cursor: pointer; padding: 20px;">
+    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">👨🎓 TOTAL STUDENTS</span>
+    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ stats.total_students }}</span>
+    <span style="font-size: 11px; color: var(--color-text-muted);">+4 registered this month</span>
+  </div>
+  
+  <!-- Performance KPI -->
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/analytics';" style="cursor: pointer; padding: 20px;">
+    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">📊 CLASS ACADEMIC AVG</span>
+    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_academic) }}%</span>
+    <span style="font-size: 11px; color: var(--color-text-muted);">↑ 3% vs prev period</span>
+  </div>
+
+  <!-- Attendance KPI -->
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/attendance';" style="cursor: pointer; padding: 20px;">
+    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">📅 CLASS ATTENDANCE RATE</span>
+    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_attendance) }}%</span>
+    <span style="font-size: 11px; color: var(--color-text-muted);">↓ 2% this month</span>
+  </div>
+
+  <!-- Cyber Wellness KPI -->
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/wellness';" style="cursor: pointer; padding: 20px;">
+    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">🛡 CYBER-WELLNESS INDEX</span>
+    {% if stats.total_students > 0 and stats.avg_wellness == 0.0 %}
+      <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">Pending</span>
+      <span style="font-size: 11px; color: var(--color-warning);">Wellness audit pending</span>
+    {% else %}
+      <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_wellness) }}%</span>
+      <span style="font-size: 11px; color: var(--color-text-muted);">Healthy overall</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 1 Split: Needs Attention & Performance Trend -->
+<div class="dashboard-split" style="margin-bottom: 20px;">
+  <!-- Needs Attention Panel -->
+  <div class="panel glass" style="padding: 25px;">
+    <h3 style="color: var(--color-warning); font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px;">⚠ NEEDS ATTENTION</h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <!-- High Risk Link -->
+      <div class="attention-row" onclick="window.location.href='/analytics';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
+        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🔴 High Risk Students</span>
+        <span style="font-size: 15px; font-weight: 800; color: #FF0000;">{{ needs_attention.high_risk }}</span>
+      </div>
+
+      <!-- Low Attendance Link -->
+      <div class="attention-row" onclick="window.location.href='/attendance';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
+        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🟠 Low Attendance Alerts</span>
+        <span style="font-size: 15px; font-weight: 800; color: #FF7A00;">{{ needs_attention.low_attendance }}</span>
+      </div>
+
+      <!-- Wellness Alerts Link -->
+      <div class="attention-row" onclick="window.location.href='/wellness';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
+        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🟡 Cyber-Wellness Alerts</span>
+        <span style="font-size: 15px; font-weight: 800; color: var(--color-warning);">{{ needs_attention.wellness_alerts }}</span>
+      </div>
+    </div>
+    
+    <div style="margin-top: 15px;">
+      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: #FF4D4D; text-decoration: none;">VIEW ALL ALERTS →</a>
+    </div>
+  </div>
+
+  <!-- Performance Trend Chart Panel -->
+  <div class="panel glass" style="padding: 25px;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">📊 CLASS PERFORMANCE TREND</h3>
+    
+    {% if trend_labels %}
+      <div style="width: 100%; height: 160px; position: relative;">
+        <canvas id="performanceTrendChart"></canvas>
+      </div>
+    {% else %}
+      <div style="height: 160px; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.15); border-radius: 8px; border: 1px dashed var(--border);">
+        <span style="font-size: 13px; color: var(--color-text-muted); font-weight: 700;">Not enough data for trend analysis</span>
+      </div>
+    {% endif %}
+
+    <div style="margin-top: 15px;">
+      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: #FFFFFF; text-decoration: none;">VIEW FULL ANALYTICS →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2 Split: Students Needing Support & Quick Actions -->
+<div class="dashboard-split" style="margin-bottom: 20px;">
+  <!-- Students Needing Support Table -->
+  <div class="panel glass" style="padding: 25px;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">👥 STUDENTS NEEDING SUPPORT</h3>
+    
+    <div class="panel-scroll" style="height: auto; min-height: 230px;">
+      {% if support_list %}
+        <div class="table-responsive">
+          <table class="data-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Risk Level</th>
+                <th>LHS Score</th>
+                <th>Main Concern</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in support_list %}
+                <tr onclick="window.location.href='/analytics?student_id={{ s.student_id }}';" style="cursor: pointer;">
+                  <td style="font-weight: 700; color: #FFFFFF;">{{ s.name }}</td>
+                  <td>
+                    {% if s.risk == 'HIGH' %}
+                      <span style="color: #FF0000; font-weight: 800;">🔴 HIGH</span>
+                    {% elif s.risk == 'MEDIUM' %}
+                      <span style="color: #FF7A00; font-weight: 800;">🟠 MEDIUM</span>
+                    {% else %}
+                      <span style="color: #34A853; font-weight: 800;">🟢 LOW</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-weight: 700; color: #FFFFFF;">{{ "%.0f"|format(s.lhs) }}%</td>
+                  <td style="color: var(--color-text-muted);">{{ s.reason }}</td>
+                  <td style="text-align: right;">
+                    <a href="/analytics?student_id={{ s.student_id }}" class="btn btn-primary" style="padding: 4px 8px; font-size: 10px; font-weight: 700;">Intervene</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="height: 180px; display: flex; align-items: center; justify-content: center;">
+          <p style="color: var(--color-success); font-size: 13px; font-weight: 700;">All students are currently on track! 🟢</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top: 15px;">
+      <a href="/students" style="font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-decoration: none;">VIEW ALL STUDENTS →</a>
+    </div>
+  </div>
+
+  <!-- Quick Actions Sidebar Panel -->
+  <div class="panel glass" style="padding: 25px;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">⚡ QUICK ACTIONS</h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <a href="/students" class="btn btn-primary quick-action-btn">👤 Register New Student</a>
+      <a href="/attendance" class="btn btn-primary quick-action-btn">✓ Mark Attendance Registry</a>
+      <a href="/assessments" class="btn btn-primary quick-action-btn">📝 Add Academic Assessment</a>
+      <a href="/wellness" class="btn btn-primary quick-action-btn">🛡 Lodge Cyber Wellness Audit</a>
+      <a href="/assistant" class="btn btn-primary quick-action-btn" style="background-color: var(--color-primary);">🤖 Ask AI Decision Assistant</a>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3 Split: Today's Attendance & AI Daily Insight -->
+<div class="dashboard-split" style="margin-bottom: 20px;">
+  <!-- Today's Attendance Widget -->
+  <div class="panel glass" style="padding: 25px; min-height: 190px;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">📅 TODAY'S ATTENDANCE</h3>
+    
+    {% if today_attendance.marked %}
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">
+          {{ today_attendance.present }} Present | {{ today_attendance.absent }} Absent (Class: XII-A)
+        </span>
+        <span style="font-size: 13px; font-weight: 700; color: #34A853;">
+          Attendance Rate: {{ "%.1f"|format(today_attendance.rate) }}%
+        </span>
+        
+        <!-- HTML progress bar -->
+        <div style="width: 100%; background-color: #212121; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px;">
+          <div style="width: {{ today_attendance.rate }}%; background-color: #34A853; height: 100%;"></div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <a href="/attendance" class="btn btn-primary" style="padding: 8px 16px; font-size: 11px; font-weight: 700; background-color: var(--bg-hover); color: #fff; border: 1px solid var(--border);">UPDATE ATTENDANCE</a>
+        </div>
+      </div>
+    {% else %}
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 700; color: var(--color-warning);">⚠ Attendance has not been marked today.</span>
+        <div style="margin-top: 10px;">
+          <a href="/attendance" class="btn btn-primary" style="padding: 10px 18px; font-size: 12px; font-weight: 800; background-color: var(--color-primary); color: #FFFFFF;">MARK ATTENDANCE NOW</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- AI Daily Insight Card -->
+  <div class="panel glass" style="padding: 25px; min-height: 190px; display: flex; flex-direction: column;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FF4D4D;">🤖 AI DAILY INSIGHT</h3>
+    <p style="font-size: 12px; color: #E5E5E5; line-height: 1.5; margin: 0 0 15px 0; flex-grow: 1;">
+      {{ ai_insight }}
+    </p>
+    
+    <div style="display: flex; gap: 10px;">
+      <a href="/analytics" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700; background-color: var(--bg-hover); color: #FFFFFF; border: 1px solid var(--border);">ANALYZE CLASS</a>
+      <a href="/assistant" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700; background-color: var(--color-primary); color: #FFFFFF;">ASK AI ASSISTANT</a>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom activity logs timeline -->
+<div class="panel glass" style="padding: 25px; margin-bottom: 20px;">
+  <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">🕒 RECENT ACTIVITY TIMELINE</h3>
+  
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    {% for row in activity_rows %}
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 14px; color: var(--color-primary);">•</span>
+          <span style="color: #FFFFFF;">{{ row.activity }}</span>
+        </div>
+        <span style="color: var(--color-text-muted);">{{ row.activity_time }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Render performance trend Chart.js plot dynamically -->
+{% if trend_labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const ctx = document.getElementById('performanceTrendChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ trend_labels|tojson }},
+        datasets: [{
+          label: 'Class Avg (%)',
+          data: {{ trend_data|tojson }},
+          borderColor: '#E50914',
+          backgroundColor: 'rgba(229, 9, 20, 0.1)',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#E50914',
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: '#2A2A2A'
+            },
+            ticks: {
+              color: '#AAAAAA',
+              font: {
+                family: 'Outfit',
+                size: 9
+              }
+            }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            grid: {
+              color: '#2A2A2A'
+            },
+            ticks: {
+              color: '#AAAAAA',
+              font: {
+                family: 'Outfit',
+                size: 9
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

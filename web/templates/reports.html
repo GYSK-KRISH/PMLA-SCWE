@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE Reports & Exporters{% endblock %}
+{% block header_title %}Class Reports{% endblock %}
+
+{% block content %}
+<!-- Class statistics cards -->
+<div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 25px;">
+  <div class="kpi-card glass">
+    <span class="title">ACADEMIC CLASS AVG</span>
+    <span class="value" style="color: #fff;">{{ "%.1f"|format(summary.avg_academic) }}%</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">ATTENDANCE CLASS AVG</span>
+    <span class="value" style="color: #fff;">{{ "%.1f"|format(summary.avg_attendance) }}%</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">CYBER-WELLNESS AVG</span>
+    <span class="value" style="color: #fff;">{{ "%.1f"|format(summary.avg_wellness) }}%</span>
+  </div>
+</div>
+
+<div class="dashboard-split" style="grid-template-columns: 1.2fr 1fr; align-items: start;">
+  <!-- Left Side: Risk Profile Distribution -->
+  <div class="panel glass" style="height: auto; padding: 25px;">
+    <h3>RISK DISTRIBUTION PROFILE</h3>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
+        <span style="font-size: 13px; font-weight: 700; color: #fff;">LOW RISK Students</span>
+        <span style="font-size: 16px; font-weight: 800; color: #34A853;">{{ summary.risk_distribution.LOW or 0 }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
+        <span style="font-size: 13px; font-weight: 700; color: #fff;">MEDIUM RISK Students</span>
+        <span style="font-size: 16px; font-weight: 800; color: #FF7A00;">{{ summary.risk_distribution.MEDIUM or 0 }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
+        <span style="font-size: 13px; font-weight: 700; color: #fff;">HIGH RISK Students</span>
+        <span style="font-size: 16px; font-weight: 800; color: #FF0000;">{{ summary.risk_distribution.HIGH or 0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Export Utilities -->
+  <div class="panel glass" style="height: auto; padding: 25px;">
+    <h3>EXPORT UTILITIES</h3>
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+      <button class="btn btn-primary" id="btnGenClassChart" style="background-color: var(--bg-hover); color: #fff; border: 1px solid var(--border); font-size: 13px; padding: 12px;">Generate Class Performance Map</button>
+      <a href="{{ url_for('reports.export_csv') }}" class="btn btn-primary" style="font-size: 13px; padding: 12px;">Export Class Report (CSV)</a>
+      <a href="{{ url_for('reports.export_txt') }}" class="btn btn-primary" style="font-size: 13px; padding: 12px; background-color: #721c24; hover-background-color: #58151a;">Export Teacher Summary (Text)</a>
+      
+      <p id="actionStatusMsg" style="font-size: 12px; text-align: center; margin-top: 10px; font-weight: 700;"></p>
+      
+      <!-- Render dynamic performance map scatter chart -->
+      <div id="chartRenderContainer" style="display: none; text-align: center; margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
+        <span style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 10px;">GENERATED PERFORMANCE MAP SCATTER PLOT</span>
+        <img id="renderedChartImg" src="" style="width: 100%; border-radius: 6px; border: 1px solid var(--border);">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const genChartBtn = document.getElementById("btnGenClassChart");
+    if (genChartBtn) {
+      genChartBtn.addEventListener("click", () => {
+        const msg = document.getElementById("actionStatusMsg");
+        const chartDiv = document.getElementById("chartRenderContainer");
+        const chartImg = document.getElementById("renderedChartImg");
+
+        msg.textContent = "Plotting scatter metrics...";
+        msg.style.color = "#fff";
+
+        fetch("{{ url_for('reports.generate_chart') }}", {
+          method: "POST"
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            msg.textContent = data.message;
+            msg.style.color = "#34A853";
+            // Append timestamp query parameter to force image reload from cache
+            chartImg.src = data.path + "?t=" + new Date().getTime();
+            chartDiv.style.display = "block";
+          } else {
+            msg.textContent = data.message || "Failed to plot scatter metrics.";
+            msg.style.color = "#FF0000";
+          }
+        })
+        .catch(err => {
+          msg.textContent = "Error communicating with plotting modules.";
+          msg.style.color = "#FF0000";
+        });
+      });
+    }
+  });
+</script>
+{% endblock %}

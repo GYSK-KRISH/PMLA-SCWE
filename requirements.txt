@@ -1,7 +1,17 @@
+# Core Data & Analytics
 pandas
 matplotlib
+
+# Database Connectivity
 mysql-connector-python
+
+# AI Assistant & Voice Q&A
 openai
 google-genai
 SpeechRecognition
 pyttsx3
+
+# Graphical User Interfaces
+customtkinter
+Flask
+python-dotenv

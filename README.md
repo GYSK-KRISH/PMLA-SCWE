@@ -1,287 +1,132 @@
-# PMLA-SCWE
+# PMLA-SCWE: Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine
 
-Predictive Micro-Learning Analytics and Student Cyber-Wellbeing Engine.
+PMLA-SCWE is a student analytics and digital wellness engine built as a modular Python application with dual interfaces (desktop GUI and web console). It combines a MySQL/SQLite-backed data model, linear regression analytics, and an explainable AI assistant to monitor student academic progress and cyber-wellbeing.
 
-PMLA-SCWE is a student analytics project package built for CBSE-style project work. It combines a MySQL-backed data model, a modular Python application, and supporting documentation for students, teachers, and evaluators.
+---
 
-If you want the full step-by-step version that explains how to run the project and how to present it in viva, open [RUN_AND_EXPLAIN.md](RUN_AND_EXPLAIN.md).
-If you are deploying this project for the first time or setting up VS Code, VENV, and MySQL locally, please read the [Desktop Setup Guide](DESKTOP_SETUP.md). You can run `python diagnose_setup.py` to identify and resolve any environment errors.
+## 🚀 Quick Start
 
-## What This Project Does
+1. **Verify your environment**:
+   ```powershell
+   python diagnose_setup.py
+   ```
+2. **Seed the database**:
+   ```powershell
+   python seed_data.py
+   ```
+3. **Launch the application**:
+   - **Desktop GUI (CustomTkinter)**:
+     ```powershell
+     python main.py
+     ```
+   - **Web Interface (Flask Console)**:
+     ```powershell
+     python main.py --web
+     ```
 
-The project currently supports:
-- **Student CRUD Operations**: Add, update, view, and delete student profiles.
-- **Admin Login Hashing**: Secure hashed administrator access via console.
-- **Attendance Registry**: Record present, absent, or leave details with percentage counters.
-- **Diagnostic Assessments**: Track marks obtained vs max marks for academic quizzes.
-- **Weekly Progress Logs**: Record weekly checkpoints to track improvement curves.
-- **Predictive Analytics**: Runs mathematical linear regression trends and risk category mappings.
-- **Visual Charting & Exporters**: Outputs matplotlib figures and CSV/text report documents.
-- **Database Fallbacks**: Automatically falls back to SQLite if local MySQL service is inactive.
-- **Explainable AI Assistant**: Type or speak voice questions to query context-rich student reports.
+---
 
-## Project Structure
+## 📋 What This Project Does
 
-- `PMLA_SCWE/` - Python package containing the application code
-  - `database.py` - handles MySQL connection and SQLite fallback logic.
-  - `analytics.py` - handles mathematical computations (LHS, linear regression, averages).
-  - `recommendation.py` - flags rule-based teacher alerts and risk classifications.
-  - `graphs.py` - renders academic trends, wellness stats, and class comparisons.
-  - `reports.py` - builds formatted student/class txt documents and CSV files.
-  - `ai_assistant.py` - manages OpenAI/Gemini clients and voice synthesis.
-  - `main.py` - routes command-line loops and submenu layouts.
-- `schema.sql` - MySQL database script for schema creation.
-- `requirements.txt` - Python project package dependencies.
-- `RUN_AND_EXPLAIN.md` - Comprehensive student run instructions and Viva Q&As.
+The engine integrates and monitors two major dimensions of student life:
 
-## Requirements
+1. **Academic Analytics**:
+   - **CRUD Operations**: Manage student records (add, edit, list, delete).
+   - **Attendance Tracker**: Daily registry (Present/Absent) with automatic percentage calculations.
+   - **Diagnostic Assessments**: Academic test logging (marks obtained vs max marks).
+   - **Weekly Progress Tracking**: Weekly checkpoints to establish score trends.
+   - **Predictive Analytics**: Runs **Simple Linear Regression** over weekly checkpoints to forecast next week's score.
+   - **Learning Health Score (LHS)**: Composite indicator:
+     $$\text{LHS} = 40\% \cdot \text{Academic Avg} + 25\% \cdot \text{Weekly Progress} + 20\% \cdot \text{Attendance \%} + 15\% \cdot \text{Cyber-Wellness Score}$$
 
-- Python 3.14+ or compatible Python 3.x installation
-- MySQL Server & Workbench (Optional - Fallback database included)
-- Python packages listed in `requirements.txt`
+2. **Cyber-Wellbeing & Digital Health**:
+   - **Cyber Wellness Audits**: Tracks screen time hours (study vs recreational), daily sleep hours, distraction levels, and safety ratings.
+   - **Composite Wellness Score**: Calculates digital safety and health levels.
+   - **Explainable Teacher Alerts**: Classifies students into **Low, Medium, or High Risk** categories based on combined wellness, attendance, and regression metrics.
 
-### Python dependencies
+3. **Advanced Integrations**:
+   - **Matplotlib Visualization Exporter**: Generates line charts, donut charts, and health breakdowns, saving them in the `reports/` folder.
+   - **Explainable AI Assistant**: Type or speak (voice synthesis via `pyttsx3`) questions about student performance.
+   - **Portability (Dual Backends)**: Automatically connects to local MySQL on port 3306 or falls back to a local `pmla_scwe_fallback.db` SQLite database if the MySQL service is offline.
 
-The project uses:
-- `matplotlib` (data visualization)
-- `mysql-connector-python` (MySQL driver)
-- `openai` & `google-genai` (AI Assistant APIs)
-- `SpeechRecognition` & `pyttsx3` (voice command recording and voice synthesis)
+---
 
-## Database Overview
+## 📂 Project Structure
 
-The database name used by the project is `pmla_scwe`.
+```text
+PMLA-SCWE/
+├── main.py                   # Main entry point (CLI argument router)
+├── seed_data.py              # Root-level mock database seeding script
+├── diagnose_setup.py         # 5-stage setup verification tool
+├── requirements.txt          # Minimal project library dependencies
+├── schema.sql                # MySQL Workbench database creation script
+│
+├── core/                     # Business Logic and Database Services
+│   ├── database.py           # MySQL/SQLite query execution and auto-fallback
+│   ├── auth_service.py       # Password PBKDF2 hashing and authentication
+│   ├── student_service.py    # Student record database transactions
+│   ├── analytics.py          # Regression math and LHS computations
+│   ├── recommendation.py     # Teacher risk flags and intervention logic
+│   ├── graphs.py             # Matplotlib rendering services
+│   ├── reports.py            # Text and CSV export builders
+│   ├── ai_assistant.py       # OpenAI / Gemini API orchestration
+│   └── voice_service.py      # SpeechRecognition and pyttsx3 audio engines
+│
+├── desktop/                  # CustomTkinter Desktop Client
+│   ├── app.py                # Main GUI frame and theme controller
+│   └── dashboard.py          # Dashboard visualization widgets
+│
+├── web/                      # Flask Web Console
+│   ├── app.py                # Flask server initializer
+│   ├── routes/               # HTTP endpoint routers
+│   └── templates/            # HTML presentation pages
+│
+├── database/                 # Original database schema directory
+│   └── schema.sql            # Master schema (Source of truth)
+│
+└── reports/                  # Generated PDF/PNG charts, text, and CSVs
+```
 
-Main tables include:
+---
 
-- `Admin_Login`
-- `Students`
-- `Learning_Objectives`
-- `Diagnostic_Logs`
-- `Cyber_Audit`
-- `Weekly_Progress`
-- `Achievements`
-- `Attendance`
-- `Activity_Log`
-- `Reports_Metadata`
+## 🛠️ Step-by-Step Installation
 
-## MySQL Workbench Setup
+### 1. Open the project workspace
+Open the `PMLA-SCWE` root directory in VS Code (**File -> Open Folder...**).
 
-Use these values when creating the connection in MySQL Workbench:
-
-- Connection Name: `PMLA-SCWE Project Package`
-- Hostname: `127.0.0.1` or `localhost`
-- Port: `3306`
-- Username: `root`
-- Password: your local MySQL root password
-- Default Schema: `pmla_scwe`
-
-Important notes:
-
-- Do not put `:3306` inside the Hostname field.
-- If Workbench says the database is unknown, leave Default Schema blank for the first connection test.
-- Run `schema.sql` first to create the database and tables.
-
-## Setup Instructions
-
-### 1. Clone or open the workspace
-
-Open the project folder in VS Code or your preferred editor.
-
-### 2. Create a virtual environment
-
+### 2. Configure a virtual environment (VENV)
+Open the integrated VS Code terminal (`Ctrl + Shift + ~`) and run:
 ```powershell
 python -m venv .venv
 ```
+Select the virtual environment interpreter in VS Code (`Ctrl + Shift + P` -> `Python: Select Interpreter` -> choose `.venv\Scripts\python.exe`). Close and reopen the terminal to activate it.
 
-### 3. Activate the virtual environment
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### 4. Install dependencies
-
+### 3. Install dependencies
 ```powershell
 pip install -r requirements.txt
 ```
 
-If your Python installation blocks direct package changes, install into the project virtual environment instead.
+### 4. Database Setup (Optional MySQL)
+1. Ensure the MySQL service is running on your system (e.g. check `services.msc`).
+2. Open MySQL Workbench, open the root `schema.sql` script, and execute it to create the database schema.
+3. If necessary, change the root database password in `core/config.py`.
 
-### 5. Create the database schema
-
-Open `schema.sql` in MySQL Workbench or run it from the SQL editor. The script creates the `pmla_scwe` database and all tables.
-
-If you want to reset the database before rerunning the schema:
-
-```sql
-DROP DATABASE IF EXISTS pmla_scwe;
-CREATE DATABASE pmla_scwe;
-USE pmla_scwe;
-```
-
-### 6. Seed sample data
-
-To load 100 sample students and related rows, run:
-
-```powershell
-python -m PMLA_SCWE.seed_data
-```
-
-This seeds:
-
-- 100 students
-- 100 diagnostic log rows
-- 100 attendance rows
-- 100 cyber audit rows
-- 100 weekly progress rows
-- report metadata rows
-- activity log rows
-- sample achievements
-
-## Running the App
-
-Start the menu application with:
-
-```powershell
-python -m PMLA_SCWE.main
-```
-
-When the app starts, it shows the main menu:
-
-- Login
-- Add Student
-- List Students
-- Attendance
-- Assessment
-- Predictive Analytics & Insights
-- Exit
-
-## Default App Login
-
-The application creates a default admin account when no admin exists yet.
-
-- Username: `admin`
-- Password: `admin123`
-
-## Main Menu Features
-
-### Login
-
-Logs into the application using the admin credentials stored in the database.
-
-### Add Student
-
-Adds a student record with:
-
-- first name
-- last name
-- class or section
-- date of birth
-- gender
-- email
-- phone
-
-### List Students
-
-Displays the students currently stored in the database.
-
-### Attendance
-
-Provides options to:
-
-- mark attendance
-- calculate attendance percentage
-
-### Assessment
-
-Provides options to:
-
-- add a diagnostic assessment
-- view assessment history
-
-### Predictive Analytics & Insights
-
-Provides statistical predictive analytics and risk classification:
-- **View Single Student Analytics**: Calculates a student's performance trend using simple linear regression, estimates next week's score, computes a weighted Learning Health Score, and classifies risk levels.
-- **Class-wide Risk Report**: Aggregates high-risk students and active alerts (such as declining weekly trends, wellness concerns, or critical attendance) for proactive teacher intervention.
-
-## SQLite Fallback
-
-If MySQL is not available, the application falls back to a local SQLite database file named `pmla_scwe_fallback.db`.
-
-This lets you run and test the app even when the MySQL connector or MySQL server is unavailable.
-
-## Sample Data Helper
-
-The file `PMLA_SCWE/seed_data.py` loads bulk sample data into the current database.
-
-You can rerun it safely. It will fill missing sample rows and keep the app data usable for demonstrations.
-
-## Documentation Folder
-
-The `documentation/` folder contains extra notes, including MySQL Workbench connection instructions and project documentation content.
-
-## Troubleshooting
-
-### MySQL connection fails
-
-- Check that MySQL Server is running.
-- Confirm the host is `127.0.0.1`.
-- Confirm the port is `3306`.
-- Confirm the root password is correct.
-
-### Unknown database error
-
-If Workbench says `Unknown database 'pmla_scwe'`, connect first without setting a default schema, then run `schema.sql`.
-
-### Login does not work
-
-- Make sure the database contains an admin row.
-- Use the default login `admin / admin123` if no admin has been created yet.
-
-### App starts but MySQL is unavailable
-
-The SQLite fallback should still allow the app to run. Check the generated file `pmla_scwe_fallback.db` in the project root.
-
-## Current Status
-
-The project is now fully functional with:
-- Schema creation & MySQL Workbench setup
-- SQLite fallback database support
-- Administrator login authentication
-- Student CRUD operations
-- Attendance and diagnostic assessment tracking
-- Matplotlib visualizations (academic trends, attendance, cyber-wellness, learning health)
-- Data export features (text reports and CSV spreadsheets)
-- Statistical predictive models (regression forecasting) & risk classification
-- **AI Assistant Integration (Q&A, context-aware student analysis, suggestions)**
-- **Voice Command Interface (Speech-to-Text & optional Text-to-Speech)**
+*Note: If MySQL is not running or connection fails, the app will automatically switch to SQLite fallback and write data to `pmla_scwe_fallback.db`.*
 
 ---
 
-## AI Assistant & Voice Command Integration
+## 🤖 AI Assistant Configuration
 
-PMLA-SCWE features a built-in AI Assistant module (`ai_assistant.py`) which acts as an explainable decision-support engine. 
-
-### What it Does
-1. **General Q&A**: Answers conceptual questions about micro-learning and digital wellbeing.
-2. **Contextual Student Analysis**: Reads current analytics data (academics, weekly trends, attendance, cyber-wellness score, risk levels) and explains the student's status.
-3. **Actionable Suggestions**: Recommends practical educational interventions for the student.
-4. **Voice Commands**: Captures speech from your microphone, converts it to text, processes it through the AI, and optional reads responses aloud using text-to-speech.
-
-### How to Configure API Keys
-To use the AI features, you must configure either OpenAI or Google Gemini. 
-1. Create a `.env` file in the project root directory (copy `.env.example`).
-2. Add your API key:
+1. Create a `.env` file in the root directory (based on `.env.example`).
+2. Add your keys:
    - For OpenAI: `OPENAI_API_KEY=your_key_here`
    - For Gemini: `GEMINI_API_KEY=your_key_here`
-3. The app will automatically read the keys from the environment. **Do not commit your `.env` file to git.**
+3. If no key is set, the app will run with the local rules-based engine and bypass API calls gracefully.
 
-### Running Voice Commands
-Make sure you install the required voice libraries:
-```powershell
-pip install SpeechRecognition pyttsx3
-```
-*Note: Voice features will fall back gracefully to keyboard entry if a microphone is not connected or pyttsx3 is not installed.*
+---
 
+## 🔍 Troubleshooting
+
+- **ModuleNotFoundError**: Ensure you are running commands from the project root and that your virtual environment `(.venv)` is active.
+- **Microphone issues**: If PyAudio fails to install or a mic is missing, the AI Assistant voice mode will gracefully fall back to keyboard entry.
+- **Port 3306 error**: Check your Windows Services settings to ensure MySQL is running, or let the app run on the auto-generated SQLite database.

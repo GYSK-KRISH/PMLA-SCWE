@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE Cyber-Wellness Audit{% endblock %}
+{% block header_title %}Cyber Wellness Audits{% endblock %}
+
+{% block content %}
+<div class="dashboard-split" style="grid-template-columns: 1fr 1.2fr; align-items: start;">
+  <!-- Left Side: Add Audit Form -->
+  <div class="panel glass" style="height: auto; padding: 25px;">
+    <h3>SUBMIT NEW AUDIT</h3>
+    
+    <!-- Lookup Student -->
+    <form method="GET" action="{{ url_for('wellness.view_wellness') }}" style="margin-bottom: 20px;">
+      <div class="form-group">
+        <label>Student ID</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" name="student_id" class="form-control" placeholder="Enter student ID..." value="{{ student_id or '' }}" style="flex-grow: 1;">
+          <button type="submit" class="btn btn-primary" style="background-color: var(--bg-hover); color: #fff; border: 1px solid var(--border);">Load</button>
+        </div>
+      </div>
+    </form>
+
+    {% if student_info %}
+      <div style="margin-bottom: 20px; padding: 12px; background-color: var(--bg-secondary); border-radius: 6px; border-left: 3px solid var(--color-primary);">
+        <span style="font-size: 13px; font-weight: 700; color: #fff; display: block;">Active Student:</span>
+        <span style="font-size: 12px; color: var(--text-secondary);">{{ student_info.first_name }} {{ student_info.last_name }} (Class: {{ student_info.class_section }})</span>
+      </div>
+
+      <!-- Add Audit Form -->
+      <form id="auditForm" action="{{ url_for('wellness.add_audit') }}" method="POST">
+        <input type="hidden" name="student_id" value="{{ student_info.student_id }}">
+        
+        <div class="form-group">
+          <label>Daily Screen Time (hrs)*</label>
+          <input type="number" step="0.1" name="daily_screen_time" class="form-control" placeholder="e.g. 5.5" required>
+        </div>
+
+        <div class="form-group">
+          <label>Study Screen Time (hrs)*</label>
+          <input type="number" step="0.1" name="study_screen_time" class="form-control" placeholder="e.g. 3.5" required>
+        </div>
+
+        <div class="form-group">
+          <label>Recreational Screen Time (hrs)*</label>
+          <input type="number" step="0.1" name="recreational_screen_time" class="form-control" placeholder="e.g. 2.0" required>
+        </div>
+
+        <div class="form-group">
+          <label>Sleep Duration (hrs)*</label>
+          <input type="number" step="0.1" name="sleep_duration" class="form-control" placeholder="e.g. 8.0" required>
+        </div>
+
+        <div class="form-group">
+          <label>Digital Distraction Level (1-5)</label>
+          <select name="digital_distraction_level" class="form-control" style="background-color: #121212;">
+            <option value="1">1 (None)</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5 (Severe)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Cyber Safety Awareness (1-5)</label>
+          <select name="cyber_safety_awareness" class="form-control" style="background-color: #121212;">
+            <option value="1">1 (Poor)</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5" selected>5 (Excellent)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Remarks</label>
+          <input type="text" name="remarks" class="form-control" placeholder="Remarks (optional)">
+        </div>
+
+        <div class="form-group">
+          <label>Audit Date</label>
+          <input type="date" name="audit_date" class="form-control" id="todayDate">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 10px;">SUBMIT AUDIT</button>
+        <p id="formStatusMsg" style="margin-top: 12px; font-size: 12px; text-align: center; font-weight: 700;"></p>
+      </form>
+    {% else %}
+      <p style="color: var(--color-text-muted); font-size: 13px; text-align: center; padding: 20px;">Specify a valid Student ID above to lodge a new audit record.</p>
+    {% endif %}
+  </div>
+
+  <!-- Right Side: Logs History -->
+  <div class="panel glass" style="height: auto; min-height: 520px; padding: 25px;">
+    <h3>AUDIT HISTORY LOGS</h3>
+    <div class="panel-scroll">
+      {% if history %}
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          {% for audit in history %}
+            <div style="padding: 15px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 12px; font-weight: 700; color: #fff;">Date: {{ audit.audit_date }}</span>
+                <span style="font-size: 12px; font-weight: 700; color: var(--color-success);">Wellness Index: {{ "%.1f"|format(audit.wellness_score) }}%</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                Screen: {{ audit.daily_screen_time }}h (Study: {{ audit.study_screen_time }}h / Rec: {{ audit.recreational_screen_time }}h) | Sleep: {{ audit.sleep_duration }}h<br>
+                Distraction: {{ audit.digital_distraction_level }}/5 | Safety Awareness: {{ audit.cyber_safety_awareness }}/5
+              </p>
+              {% if audit.remarks %}
+                <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0 0 0;">Remarks: {{ audit.remarks }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--color-text-muted); text-align: center; margin-top: 140px;">No audit logs loaded.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const todayInput = document.getElementById("todayDate");
+    if (todayInput) {
+      todayInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    const form = document.getElementById("auditForm");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const msg = document.getElementById("formStatusMsg");
+        msg.textContent = "Submitting...";
+        msg.style.color = "#fff";
+
+        const formData = new FormData(form);
+        fetch(form.action, {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            msg.textContent = data.message;
+            msg.style.color = "#34A853";
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            msg.textContent = data.message || "Audit submission failed.";
+            msg.style.color = "#FF0000";
+          }
+        })
+        .catch(err => {
+          msg.textContent = "Connection error.";
+          msg.style.color = "#FF0000";
+        });
+      });
+    }
+  });
+</script>
+{% endblock %}

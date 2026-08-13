@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE Attendance Registry{% endblock %}
+{% block header_title %}ATTENDANCE REGISTRY{% endblock %}
+
+{% block content %}
+<div class="panel glass" style="height: auto; min-height: 520px;">
+  <!-- Selection Filters -->
+  <form action="{{ url_for('attendance.mark_attendance_page') }}" method="GET" style="display: flex; gap: 15px; align-items: center; margin-bottom: 25px; flex-wrap: wrap; background-color: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label for="class_section" style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">Class Section:</label>
+      <select name="class_section" id="class_section" class="form-control" style="width: 140px; padding: 6px 12px; font-size: 13px;" onchange="this.form.submit()">
+        {% for c in classes %}
+          <option value="{{ c }}" {% if selected_class == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label for="attendance_date" style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">Date:</label>
+      <input type="date" name="date" id="attendance_date" class="form-control" style="width: 160px; padding: 6px 12px; font-size: 13px;" value="{{ selected_date }}" onchange="this.form.submit()">
+    </div>
+
+    <input type="submit" class="btn btn-primary" value="Load Cohort" style="padding: 8px 16px;">
+  </form>
+
+  {% if students %}
+    <!-- Roster Grid -->
+    <form id="attendanceForm" action="{{ url_for('attendance.save_attendance_api') }}" method="POST">
+      <input type="hidden" name="class_section" value="{{ selected_class }}">
+      <input type="hidden" name="date" value="{{ selected_date }}">
+
+      <div class="attendance-grid">
+        <div style="display: flex; justify-content: space-between; padding: 5px 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;">
+          <span>Student Name</span>
+          <span style="width: 164px; text-align: center;">Roster Marking</span>
+        </div>
+
+        {% for s in students %}
+          {% set status = existing_attendance.get(s.student_id, 'Present') %}
+          <div class="attendance-item">
+            <span style="font-weight: 600; font-size: 14px; color: #fff;">{{ s.first_name }} {{ s.last_name }} <span style="font-weight: 400; font-size: 11px; color: var(--color-text-muted); margin-left: 10px;">ID: {{ s.student_id }}</span></span>
+            
+            <div class="toggle-group">
+              <!-- Radio selectors for Present / Absent -->
+              <input type="radio" id="p_{{ s.student_id }}" name="status_{{ s.student_id }}" value="Present" {% if status == 'Present' %}checked{% endif %}>
+              <label for="p_{{ s.student_id }}" class="lbl-present">Present</label>
+
+              <input type="radio" id="a_{{ s.student_id }}" name="status_{{ s.student_id }}" value="Absent" {% if status == 'Absent' %}checked{% endif %}>
+              <label for="a_{{ s.student_id }}" class="lbl-absent">Absent</label>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Action items -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+        <span id="attendanceStatusMsg" style="font-size: 14px; font-weight: 600;"></span>
+        <input type="submit" id="saveAttendanceBtn" class="btn" style="background-color: var(--color-success); color: #000; font-weight: bold; height: 45px; width: 220px;" value="SAVE ALL ATTENDANCE">
+      </div>
+    </form>
+  {% else %}
+    <p style="color: var(--color-text-muted); text-align: center; padding: 60px;">No students found in this class section.</p>
+  {% endif %}
+</div>
+{% endblock %}

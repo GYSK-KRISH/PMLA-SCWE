@@ -1,15 +1,15 @@
 # PMLA-SCWE: Comprehensive Presentation & Running Guide
 
-This guide is designed to help you run the **PMLA-SCWE** (Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine) application on **any computer** and explain every line of code, math formula, and database concept to your teacher in a deep, impressive manner to secure full marks.
+This guide is designed to help you run the **PMLA-SCWE** application on any computer and explain every line of code, math formula, and database concept to your evaluator to secure full marks.
 
 ---
 
-## 1. Deep Project Meaning & Objectives
+## 1. Project Meaning & Objectives
 
 **What is PMLA-SCWE?**
 It is a student performance analysis and wellness prediction engine. It monitors two major facets of student life:
 1. **Academic Progress**: Tracked via diagnostic assessments and weekly progress scores.
-2. **Cyber-Wellbeing**: Tracked via digital habits (daily screen time, recreational screen time, sleep duration, distraction level, and safety awareness).
+2. **Cyber-Wellbeing**: Tracked via digital habits (daily screen time, sleep duration, distraction level, and safety awareness).
 
 **Project Objectives (What to tell your teacher):**
 - **Data Integration**: Standardize student academic and cyber-wellbeing logs into a single database.
@@ -21,47 +21,50 @@ It is a student performance analysis and wellness prediction engine. It monitors
 
 ---
 
-## 2. Deep System Architecture & File Structure
+## 2. System Architecture & File Structure
 
 The project has a clean, modular structure. Explain how files interact:
 
 ```text
-                             USER MENU (main.py)
-                                     │
-         ┌───────────────────────────┼───────────────────────────┐
-         ▼                           ▼                           ▼
-DATABASE PATHWAYS (database.py)  ANALYTICS ENGINE (analytics.py)  AI & VOICE (ai_assistant.py)
-   ├─ MySQL (Default Port 3306)      ├─ Regression Trend             ├─ OpenAI Client
-   └─ SQLite (Local Fallback File)   ├─ Learning Health Score        ├─ Gemini Client
-                                     └─ Risk Classifications         ├─ Speech-to-Text (Voice)
-                                                                     └─ Text-to-Speech (Audio)
+                             USER INTERFACE
+                   (main.py / main.py --web / desktop/)
+                                      │
+          ┌───────────────────────────┼───────────────────────────┐
+          ▼                           ▼                           ▼
+DATABASE PATHWAYS (core/database.py)  ANALYTICS (core/analytics.py)  AI & VOICE (core/ai_assistant.py)
+   ├─ MySQL (Default Port 3306)       ├─ Regression Trend            ├─ OpenAI & Gemini Clients
+   └─ SQLite (Fallback File)          ├─ Learning Health Score       ├─ Speech-to-Text (Voice)
+                                      └─ Risk Classifications        └─ Text-to-Speech (Audio)
 ```
 
 ### Module Breakdown
-1. **[main.py](file:///d:/PMLA-SCWE/PMLA_SCWE/main.py)**: The main user interface. It renders menus, takes input, runs validations, and routes user actions.
-2. **[database.py](file:///d:/PMLA-SCWE/PMLA_SCWE/database.py)**: Manages database connections. Contains the **SQLite Fallback Logic** that switches the app to SQLite if MySQL Server is offline.
-3. **[analytics.py](file:///d:/PMLA-SCWE/PMLA_SCWE/analytics.py)**: The mathematical heart of the app. Computes averages, regression line slopes, future score predictions, and final Learning Health Scores.
-4. **[recommendation.py](file:///d:/PMLA-SCWE/PMLA_SCWE/recommendation.py)**: The rule-based engine. Generates explainable alerts, intervention plans, and risk reasons for teachers.
-5. **[ai_assistant.py](file:///d:/PMLA-SCWE/PMLA_SCWE/ai_assistant.py)**: Integrates OpenAI and Google Gemini APIs. Also manages microphone capturing (`SpeechRecognition`) and offline text-to-speech output (`pyttsx3`).
-6. **[graphs.py](file:///d:/PMLA-SCWE/PMLA_SCWE/graphs.py)**: Generates visual charts (line graphs, donut charts, scatter plots) using Matplotlib and saves them under the `reports/` folder.
-7. **[reports.py](file:///d:/PMLA-SCWE/PMLA_SCWE/reports.py)**: Assembles textual reports and exports student/class statistics to CSV spreadsheets.
+1. **[main.py](file:///d:/PMLA-SCWE/main.py)**: Router entry point. Parses CLI args and starts the desktop GUI or Flask web app.
+2. **[seed_data.py](file:///d:/PMLA-SCWE/seed_data.py)**: Clears existing data, resets ID counters, and seeds 100 mock student profiles.
+3. **[diagnose_setup.py](file:///d:/PMLA-SCWE/diagnose_setup.py)**: 5-stage setup verification tool.
+4. **[core/database.py](file:///d:/PMLA-SCWE/core/database.py)**: Manages database connections and SQLite fallback mode.
+5. **[core/analytics.py](file:///d:/PMLA-SCWE/core/analytics.py)**: Computes regression line slopes, future score predictions, and composite Learning Health Scores.
+6. **[core/recommendation.py](file:///d:/PMLA-SCWE/core/recommendation.py)**: Generates explainable risk classifications and teacher alerts.
+7. **[core/graphs.py](file:///d:/PMLA-SCWE/core/graphs.py)**: Renders Matplotlib plots and outputs them as PNGs.
+8. **[core/reports.py](file:///d:/PMLA-SCWE/core/reports.py)**: Compiles structured CSV/TXT reports.
 
 ---
 
-## 3. Explaining the Database Design (Deep Schema)
+## 3. Explaining the Database Design (Schema)
 
-Your database contains **10 tables** structured to minimize redundancy:
+Your database contains **12 tables** structured to minimize redundancy:
 
-- **`Students`**: Stores basic personal details (ID, Name, Section, DOB, Email).
-- **`Admin_Login`**: Stores administrator username and hashed password credentials.
-- **`Learning_Objectives`**: Stores names of academic subjects and learning targets.
-- **`Diagnostic_Logs`**: Stores diagnostic test results (Obtained Score vs Max Score).
-- **`Attendance`**: Tracks presence (`P` for present, `A` for absent, `L` for leave) per date.
-- **`Cyber_Audit`**: Stores daily screen hours, recreational screen hours, sleep hours, safety ratings (1-5), and distraction levels (1-5).
-- **`Weekly_Progress`**: Tracks weekly test scores used to compute regression trends.
-- **`Achievements`**: Stores student awards or badges.
-- **`Reports_Metadata`**: Logs generated reports.
-- **`Activity_Log`**: Logs system transactions for audit trails.
+- **`Students`**: Basic personal details (ID, Name, Section, DOB, Email).
+- **`Admin_Login`**: Administrator username and hashed password credentials (legacy support).
+- **`Users`**: Multi-user accounts (Teacher, Admin, Student) with roles and statuses.
+- **`Learning_Objectives`**: Academic subject descriptions and learning targets.
+- **`Diagnostic_Logs`**: Assessment scores (obtained score vs max score) linked to objectives.
+- **`Attendance`**: Daily present (`P`) or absent (`A`) logs.
+- **`Cyber_Audit`**: Sleep duration, screen hours (daily, study, recreational), safety levels.
+- **`Weekly_Progress`**: Weekly progress scores for regression analysis.
+- **`Achievements`**: Student badges and awards.
+- **`Notifications`**: System alerts and messages.
+- **`Reports_Metadata`**: Metadata logs for exported reports.
+- **`Activity_Log`**: Logs of system activities.
 
 ### Database Keys & Constraints
 - **Primary Key (PK)**: Uniquely identifies a row in a table (e.g., `student_id` in `Students`).
@@ -70,9 +73,7 @@ Your database contains **10 tables** structured to minimize redundancy:
 
 ---
 
-## 4. Explaining the Mathematics & Logic (Super Deep)
-
-Teachers love mathematical explanations. Memorize these formulas:
+## 4. Mathematics & Logic
 
 ### A. Simple Linear Regression (Academic Score Forecasting)
 Given a list of weekly progress scores over time $y$ at weeks $x = [1, 2, 3, 4, ...]$, the app fits a regression line:
@@ -87,16 +88,10 @@ $$y = mx + c$$
   - **Improving**: Slope $m > 0.1$
   - **Declining**: Slope $m < -0.1$
   - **Stable**: Slope $-0.1 \le m \le 0.1$
-  - If a student has fewer than 2 weeks of progress records, the trend defaults to **Stable** and the prediction defaults to their latest score.
 
 ### B. Learning Health Score (LHS)
 A composite index reflecting student performance across four categories:
 $$\text{LHS} = 40\% \cdot \text{Academic Avg} + 25\% \cdot \text{Weekly Progress} + 20\% \cdot \text{Attendance Rate} + 15\% \cdot \text{Cyber-Wellness Score}$$
-- **Academic Average**: Derived from Diagnostic Logs.
-- **Weekly Progress**: Average of weekly test scores.
-- **Attendance Rate**: Percentage of present status (`P`).
-- **Cyber-Wellness Score**: Calculated as:
-  $$\text{Wellness Score} = 25\% \cdot \text{Sleep} + 25\% \cdot \text{Screen Hours} + 25\% \cdot \text{Distraction Level} + 25\% \cdot \text{Safety Rating}$$
 
 ### C. Student Risk Classification
 Students are dynamically grouped based on LHS, Attendance, and Progress:
@@ -106,65 +101,7 @@ Students are dynamically grouped based on LHS, Attendance, and Progress:
 
 ---
 
-## 5. Setting up & Running in a Desktop Computer Environment
-
-Target computers are often **offline** or **restrictive** (no admin access, no MySQL server, and no internet to download pip libraries). The project is built to handle this seamlessly.
-
-### Scenario A: Offline Computer (Using SQLite Fallback)
-If the target computer does not have MySQL Server installed or running:
-1. **Copy the Entire Project Folder**: Copy the project folder (including `pmla_scwe_fallback.db`) to a flash drive and paste it onto the target computer.
-2. **Execute Directly using SQLite**:
-   The application detects that MySQL is offline and automatically loads/creates the database tables inside `pmla_scwe_fallback.db` in the project root.
-3. **No Setup Required**: You do not need to install MySQL, configure Workbench, or type a database password! The SQLite engine is built directly into Python.
-
-### Scenario B: Offline Package Installation
-If the target computer does not have the required libraries (like `matplotlib` or `mysql-connector-python`) and has no internet connection:
-1. **Download wheels on a machine with internet**:
-   On your home computer (connected to the internet), create a folder `wheels/` and run:
-   ```powershell
-   pip download -r requirements.txt -d ./wheels
-   ```
-2. **Copy the wheels folder**: Transfer the `wheels/` directory to the target computer via a USB drive.
-3. **Install Offline on the Offline Computer**:
-   Open a terminal in the project folder and run:
-   ```powershell
-   pip install --no-index --find-links=./wheels -r requirements.txt
-   ```
-   This will install Matplotlib, MySQL connectors, and helper libraries directly from the local files without requiring the internet.
-
-### Scenario C: Standard MySQL Workbench Environment (Online/Connected)
-If the target computer has a running MySQL instance:
-1. **Configure Connection**: Edit the `PMLA_SCWE/config.py` file to match the local computer's MySQL password.
-2. **Run Schema**: Open MySQL Workbench, open the file `schema.sql`, and execute it to create the database.
-3. **Run Seeder**: Seed the database with 100 students:
-   ```powershell
-   python -m PMLA_SCWE.seed_data
-   ```
-4. **Run Application**:
-   ```powershell
-   python -m PMLA_SCWE.main
-   ```
-
----
-
-## 6. Explaining the AI & Voice Command Fallbacks
-
-If your teacher asks how the AI Assistant works, explain these four levels of fallback design:
-
-1. **AI Key Fallback**:
-   - If `OPENAI_API_KEY` or `GEMINI_API_KEY` is not present in the environment variables, the program does not crash. It displays: *"AI is not configured. Please add the API key as an environment variable."*
-2. **Voice Recognition Fallback (Stage 10)**:
-   - If the `SpeechRecognition` library is missing, or if PyAudio fails to load (due to lack of compiler headers on Windows), selecting `2. Voice Command` displays: *"SpeechRecognition library is not installed..."* or *"Microphone or capture error..."* and returns the user to safety, allowing them to type their questions instead.
-3. **Text-to-Speech (TTS) Fallback**:
-   - The app uses `pyttsx3` to read responses. If the system audio driver is missing, it catches the error silently, bypasses the speech, and prints the text response clearly on the screen.
-4. **Data Isolation (Security)**:
-   - The AI only receives the raw statistical scores and counts for a specific student. It never receives sensitive database information or system keys.
-
----
-
-## 7. Sample Viva Questions & Answers for Your Exam
-
-Here are 10 questions the external examiner or your teacher might ask:
+## 5. Sample Viva Questions & Answers
 
 1. **Q: What is a Primary Key and Foreign Key in your schema?**
    - **A**: The primary key uniquely identifies a record (e.g. `student_id` in `Students` table). The foreign key links tables together (e.g. `student_id` in `Attendance` links back to the `Students` table).

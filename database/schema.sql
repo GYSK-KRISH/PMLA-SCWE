@@ -130,3 +130,4 @@ CREATE TABLE IF NOT EXISTS Notifications (
     is_read INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
