@@ -6,7 +6,7 @@ import os
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QFrame, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout, QGridLayout, QStackedWidget, QDialog,
-    QMessageBox, QLineEdit, QScrollArea, QMenu
+    QMessageBox, QLineEdit, QScrollArea, QMenu, QComboBox
 )
 from PySide6.QtCore import Qt, QSize, QPoint
 from PySide6.QtGui import QFont, QIcon, QAction

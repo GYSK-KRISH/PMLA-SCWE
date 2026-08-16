@@ -34,30 +34,31 @@ class StudentRowWidget(QFrame):
         
         name_lbl = QLabel(name, self)
         name_lbl.setStyleSheet("font-weight: bold; color: #F5F7FA; background: transparent; border: none;")
-        layout.addWidget(name_lbl)
+        layout.addWidget(name_lbl, 3)
         
         class_lbl = QLabel(class_sec, self)
         class_lbl.setStyleSheet("background: transparent; border: none;")
-        layout.addWidget(class_lbl)
+        layout.addWidget(class_lbl, 2)
         
         email_lbl = QLabel(email, self)
         email_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
-        layout.addWidget(email_lbl)
+        layout.addWidget(email_lbl, 3)
         
         phone_lbl = QLabel(phone, self)
         phone_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
-        layout.addWidget(phone_lbl)
+        layout.addWidget(phone_lbl, 2)
         
         # Actions Sub-widget
         actions_widget = QWidget(self)
         actions_layout = QHBoxLayout(actions_widget)
         actions_layout.setContentsMargins(0, 0, 0, 0)
-        actions_layout.setSpacing(6)
+        actions_layout.setSpacing(8)
+        actions_layout.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         
         profile_btn = QPushButton("360° Profile", actions_widget)
         profile_btn.setStyleSheet(
             "QPushButton { background-color: rgba(124, 92, 255, 0.15); color: #A084FF;"
-            " border: 1px solid rgba(124, 92, 255, 0.35); border-radius: 6px; font-weight: bold; padding: 3px 8px; font-size: 11px; }"
+            " border: 1px solid rgba(124, 92, 255, 0.35); border-radius: 6px; font-weight: bold; padding: 4px 10px; font-size: 11px; }"
             "QPushButton:hover { background-color: rgba(124, 92, 255, 0.30); color: #C0AAFF; }"
         )
         profile_btn.setCursor(Qt.PointingHandCursor)
@@ -65,17 +66,25 @@ class StudentRowWidget(QFrame):
         actions_layout.addWidget(profile_btn)
 
         edit_btn = QPushButton("Edit", actions_widget)
-        edit_btn.setFixedSize(50, 26)
+        edit_btn.setStyleSheet(
+            "QPushButton { background-color: #151925; color: #F5F7FA;"
+            " border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; font-weight: 500; padding: 4px 12px; font-size: 11px; }"
+            "QPushButton:hover { background-color: #202637; border-color: rgba(255, 255, 255, 0.25); }"
+        )
+        edit_btn.setCursor(Qt.PointingHandCursor)
         edit_btn.clicked.connect(lambda: edit_cmd(student))
         actions_layout.addWidget(edit_btn)
         
         delete_btn = QPushButton("Delete", actions_widget)
-        delete_btn.setStyleSheet("color: #E5484D; border: 1px solid rgba(229, 72, 77, 0.25); background-color: rgba(229, 72, 77, 0.08);")
-        delete_btn.setFixedSize(55, 26)
+        delete_btn.setStyleSheet(
+            "QPushButton { color: #E5484D; border: 1px solid rgba(229, 72, 77, 0.35); background-color: rgba(229, 72, 77, 0.10); border-radius: 6px; font-weight: 500; padding: 4px 12px; font-size: 11px; }"
+            "QPushButton:hover { background-color: rgba(229, 72, 77, 0.22); border-color: #E5484D; }"
+        )
+        delete_btn.setCursor(Qt.PointingHandCursor)
         delete_btn.clicked.connect(lambda: delete_cmd(sid))
         actions_layout.addWidget(delete_btn)
         
-        layout.addWidget(actions_widget)
+        layout.addWidget(actions_widget, 3)
 
 
 
@@ -343,7 +352,7 @@ class StudentsFrame(QWidget):
         headers_layout = QHBoxLayout(headers_widget)
         headers_layout.setContentsMargins(15, 5, 15, 5)
         
-        lbls = [("ID", 50), ("Student Name", 3), ("Class/Section", 2), ("Email Address", 3), ("Phone Number", 2), ("Manage Actions", 2)]
+        lbls = [("ID", 50), ("Student Name", 3), ("Class/Section", 2), ("Email Address", 3), ("Phone Number", 2), ("Manage Actions", 3)]
         for text, stretch in lbls:
             lbl = QLabel(text, headers_widget)
             lbl.setFont(QFont("Outfit", 12, QFont.Bold))
@@ -351,6 +360,9 @@ class StudentsFrame(QWidget):
             if text == "ID":
                 lbl.setFixedWidth(stretch)
                 headers_layout.addWidget(lbl)
+            elif text == "Manage Actions":
+                lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                headers_layout.addWidget(lbl, stretch)
             else:
                 headers_layout.addWidget(lbl, stretch)
         self.roster_layout.addWidget(headers_widget)
