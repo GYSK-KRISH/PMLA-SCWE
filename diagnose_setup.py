@@ -168,7 +168,9 @@ def run_diagnostics():
     print(f"\n{COLOR_BOLD}[5/5] Checking Database Schema...{COLOR_RESET}")
     
     EXPECTED_TABLES = [
-        "Admin_Login",
+        "Organizations",
+        "Schools",
+        "Users",
         "Students",
         "Learning_Objectives",
         "Diagnostic_Logs",
@@ -176,10 +178,12 @@ def run_diagnostics():
         "Weekly_Progress",
         "Achievements",
         "Attendance",
-        "Activity_Log",
+        "Interventions",
+        "Notifications",
         "Reports_Metadata",
-        "Users",
-        "Notifications"
+        "Activity_Log",
+        "Schema_Migrations",
+        "Admin_Login",
     ]
 
     schema_passed = True
@@ -266,7 +270,7 @@ def run_diagnostics():
     print(f"\n{COLOR_CYAN}{COLOR_BOLD}=================================================={COLOR_RESET}\n")
 
     print("Next commands:\n")
-    print(f"  python seed_data.py")
+    print(f"  python seed_database.py")
     print(f"  python main.py")
     print(f"  python main.py --web\n")
 
