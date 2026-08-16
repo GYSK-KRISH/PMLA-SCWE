@@ -1,4 +1,15 @@
-# PMLA-SCWE: CBSE Class XII Final Viva Voce & Defense Guide
+# PMLA-SCWE: Comprehensive Viva Voce & Defense Preparation Guide
+
+**CBSE Class XII Informatics Practices / Computer Science Examination**  
+**Platform Version:** Version 1.8 (Submission Edition)
+
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (CBSE Viva Voce Preparation Guide Archive)**  
+> This file is preserved for academic defense preparation. For active Version 2.0 system documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
+
+---
 
 ## 1. Project Identity & Executive Pitch
 > **Question: What is PMLA-SCWE, and why is it not just another school management system?**

@@ -67,9 +67,10 @@ def run_diagnostics():
         "google-genai": "google.genai",
         "SpeechRecognition": "speech_recognition",
         "pyttsx3": "pyttsx3",
-        "customtkinter": "customtkinter",
+        "PySide6": "PySide6",
         "Flask": "flask",
-        "python-dotenv": "dotenv"
+        "python-dotenv": "dotenv",
+        "reportlab": "reportlab",
     }
 
     if not req_file_path.exists():

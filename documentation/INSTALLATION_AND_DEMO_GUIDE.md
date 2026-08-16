@@ -2,6 +2,13 @@
 
 **Version 1.8 — Final Release & Submission Edition**
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (v1.8 Demo Guide)**  
+> This file is preserved for practical demonstration history. For the current, authoritative Version 2.0 installation and setup runbook, see:
+> - Master Setup Guide: [INSTALLATION_AND_SETUP.md](file:///d:/PMLA-SCWE/documentation/INSTALLATION_AND_SETUP.md)
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Main Overview: [README.md](file:///d:/PMLA-SCWE/README.md)
+
 ---
 
 ## 1. Prerequisites & Environment Setup

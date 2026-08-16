@@ -2,6 +2,13 @@
 
 **Version 1.8 — Submission Edition**
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (v1.8 System Architecture & ERD Archive)**  
+> This file is preserved for historical reference. For the active Version 2.0 multi-school multi-tenant architecture and schema specifications, see:
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
+> - Database Architecture: [DATABASE_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/DATABASE_ARCHITECTURE.md)
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+
 ---
 
 ## 1. High-Level Closed-Loop Architecture

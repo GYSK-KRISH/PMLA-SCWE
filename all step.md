@@ -1,6 +1,11 @@
 # PMLA-SCWE: Live Demonstration & Step-by-Step Guide
 
-This document provides a detailed step-by-step guide to demonstrate the **Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine (PMLA-SCWE)** during your practical assessment or project presentation.
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (CBSE Class XII Demonstration Guide)**  
+> This file is preserved for historical and practical defense reference. For current installation and operation instructions, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Installation & Setup: [INSTALLATION_AND_SETUP.md](file:///d:/PMLA-SCWE/documentation/INSTALLATION_AND_SETUP.md)
+> - Main Overview: [README.md](file:///d:/PMLA-SCWE/README.md)
 
 ---
 

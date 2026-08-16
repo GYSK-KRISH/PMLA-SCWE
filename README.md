@@ -1,166 +1,204 @@
-# PMLA-SCWE: Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine
+# PMLA-SCWE
+### Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine
 
-**Version 1.8 — Final Release & Submission Edition**
-
-PMLA-SCWE is an **explainable, AI-assisted educational analytics and teacher decision-support platform** built in Python with dual presentation interfaces (**PySide6 Desktop Application** and **Flask Web Console**). It implements a closed-loop intelligence cycle:
-$$\textbf{Detect} \longrightarrow \textbf{Explain} \longrightarrow \textbf{Recommend} \longrightarrow \textbf{Teacher Review} \longrightarrow \textbf{Intervene} \longrightarrow \textbf{Monitor} \longrightarrow \textbf{Evaluate Outcomes} \longrightarrow \textbf{Command Center}$$
-
-### 📚 Official Submission Documentation Dossier
-- 📄 [Comprehensive Academic Project Report](file:///d:/PMLA-SCWE/documentation/FINAL_PROJECT_REPORT.md)
-- 📊 [12-Slide Presentation Deck & Defense Script](file:///d:/PMLA-SCWE/documentation/PRESENTATION_SLIDES_OUTLINE.md)
-- 📐 [System Architecture, Flowcharts & ER Diagrams](file:///d:/PMLA-SCWE/documentation/SYSTEM_ARCHITECTURE_AND_ERD.md)
-- 🛠️ [Installation, Setup & Live Demo Guide](file:///d:/PMLA-SCWE/documentation/INSTALLATION_AND_DEMO_GUIDE.md)
-- 🎓 [CBSE Viva Voce Preparation Guide](file:///d:/PMLA-SCWE/documentation/VIVA_PREPARATION_GUIDE.md)
-
+[![Version](https://img.shields.io/badge/Version-2.0.0--Phase1-blue.svg)](file:///d:/PMLA-SCWE/CHANGELOG.md)
+[![Status](https://img.shields.io/badge/Status-Phase_1_Complete_%7C_Phase_2A_Pending-success.svg)](file:///d:/PMLA-SCWE/documentation/DEVELOPMENT_ROADMAP.md)
+[![Tests](https://img.shields.io/badge/Tests-78%20Passed%20(100%25)-brightgreen.svg)](file:///d:/PMLA-SCWE/documentation/TESTING_AND_VERIFICATION.md)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
+[![Database](https://img.shields.io/badge/Database-MySQL%20Primary%20%2B%20SQLite%20Fallback-orange.svg)](file:///d:/PMLA-SCWE/documentation/DATABASE_ARCHITECTURE.md)
 
 ---
 
-## 🚀 Quick Start Guide
+## Project Overview
 
-### 1. Configure Python Environment & Dependencies
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
+**PMLA-SCWE** (*Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine*) is an explainable educational intelligence, academic analytics, and teacher decision-support platform. 
 
-### 2. Verify System & Database Connectivity
-```powershell
-python diagnose_setup.py
-```
+Designed to move beyond passive electronic school ledgers, PMLA-SCWE integrates **academic diagnostic assessments**, **daily attendance patterns**, and **digital cyber-wellness habits** (screen time, sleep duration, distraction level, safety awareness) into a unified, multi-dimensional **Learning Health Score (LHS)**.
 
-### 3. Seed Mock Institutional Dataset
-```powershell
-python seed_data.py
-```
-
-### 4. Launch the Applications
-* **PySide6 Desktop Application**:
-  ```powershell
-  python main.py
-  ```
-* **Flask Web Console**:
-  ```powershell
-  python main.py --web
-  ```
-  *Default Administrator Credentials: `admin` / `admin123`*
-
-### 5. Run Automated Test Suite
-```powershell
-python -m unittest discover tests/ -v
-```
-*(63/63 tests passing with 100% OK across 8 test suites)*
+The system applies **Ordinary Least Squares (OLS) Linear Regression** for transparent academic forecasting, a deterministic **Explainable Risk Engine** for early intervention, a **Closed-Loop Intervention Pipeline** to snapshot baselines and evaluate outcome recovery, and a **Multi-School Tenancy & RBAC Security Foundation** supporting multi-organization deployments.
 
 ---
 
-## 📋 Comprehensive System Capabilities (v1.0 – v1.7)
-
-### 1. Student 360° Intelligence Profile (`core/student_profile_service.py`)
-- Centralized Single Source of Truth aggregating academic performance, daily attendance records, weekly score trajectory, cyber-wellness indices, and chronological event timelines.
-- **Dynamic Learning Health Score (LHS)**:
-  $$\text{LHS} = (\text{Academic Average} \times 0.40) + (\text{Attendance Rate} \times 0.40) + (\text{Cyber-Wellness Score} \times 0.20)$$
-
-### 2. Explainable Learning Risk Engine (`core/risk_engine.py`)
-- Transparent **0–100 Multi-Factor Risk Score** with explicit factor contribution evidence:
-  - Academic Deficit ($35\%$)
-  - Attendance Deficit ($30\%$)
-  - Cyber Distraction & Wellness Deficit ($20\%$)
-  - Weekly Trajectory Slope ($15\%$)
-
-### 3. AI Teacher Copilot & Pedagogical Assistant (`core/ai/`)
-- 8 grounded decision-support actions: Explain Risk, Create Study Plan, Identify Weak Topics, Generate Intervention Plan, Summarize Class Performance, Compare Two Students, Draft Parent Letter, and Suggest Teacher Actions.
-- Resilient multi-provider failover: Google Gemini $\rightarrow$ OpenAI $\rightarrow$ Deterministic Offline Engine (`core/ai/offline_engine.py`).
-- Human-in-the-loop safety: non-autonomous design ensuring all high-stakes actions require teacher review.
-
-### 4. Professional Report Generation Engine (`core/report_service.py`)
-- Centralized exporter for 6 standardized report types.
-- High-resolution vector PDF generation via ReportLab with embedded charts, statistics tables, and educational safety notices.
-- Clean CSV spreadsheet export and live Markdown preview dialogs.
-
-### 5. Closed-Loop Intervention Tracking (`core/intervention_service.py`)
-- Automated baseline snapshots (`pre_*`) captured at creation time.
-- **Before vs. After Delta Analytics**: $\Delta_{\text{Risk}}$, $\Delta_{\text{Acad}}$, $\Delta_{\text{Att}}$, $\Delta_{\text{LHS}}$.
-- Transparent **0–100 Intervention Effectiveness Scoring**:
-  $$\text{Effectiveness Score} = \min\Big(100.0, \max\big(0.0, (\Delta_{\text{Risk}}\times 0.35 + \Delta_{\text{Acad}}\times 0.30 + \Delta_{\text{Att}}\times 0.20 + \Delta_{\text{LHS}}\times 0.15)\times 2.5\big)\Big)$$
-- Standardized outcome tiers: `Highly Effective` ($\ge 75$), `Effective` ($50-74$), `Moderate Improvement` ($25-49$), `Needs Review / Escalated` ($<25$).
-
-### 6. Smart Notification & Decision-Support Engine (`core/notification_service.py`)
-- `dedup_key` indexing with 7-day cooldown windows preventing alert floods.
-- In-place severity escalation (`MEDIUM` $\rightarrow$ `HIGH`) without database clutter.
-- Grounded positive learning milestone detection for rapid growth trajectories.
-
-### 7. Academic Intelligence Command Center (`core/command_center_service.py`)
-- Unified executive overview for Desktop (`desktop/dashboard.py`) and Web (`web/templates/dashboard.html`).
-- Automated Smart Recommended Teacher Actions banner.
-
----
-
-## 📂 Project Architecture
+## Current Version & Development Checkpoint
 
 ```text
-PMLA-SCWE/
-├── main.py                          # Dual-interface CLI launch router
-├── seed_data.py                     # Mock institutional database seeder
-├── diagnose_setup.py                # 5-stage setup verification tool
-├── requirements.txt                 # Project dependencies
-├── schema.sql                       # Master database schema
-│
-├── core/                            # Shared Business Logic & Single Source of Truth
-│   ├── database.py                  # MySQL / SQLite query engine with auto-fallback
-│   ├── auth_service.py              # PBKDF2-HMAC-SHA256 authentication
-│   ├── student_service.py           # Student record transactions
-│   ├── attendance_service.py        # Attendance registry and analytics
-│   ├── assessment_service.py        # Diagnostic assessment scoring
-│   ├── wellness_service.py          # Cyber-wellness audit computations
-│   ├── analytics.py                 # Linear regression & trend analytics
-│   ├── risk_engine.py               # Explainable 0-100 risk scoring
-│   ├── explainability.py            # Natural language evidence synthesis
-│   ├── student_profile_service.py   # Student 360° Profile aggregator
-│   ├── report_service.py            # Centralized vector PDF & CSV report engine
-│   ├── intervention_service.py      # Baseline snapshots & intervention CRUD
-│   ├── intervention_analytics.py    # Before vs After delta & effectiveness math
-│   ├── notification_service.py      # Smart deduplication & alert engine
-│   ├── command_center_service.py    # Executive command center aggregator
-│   └── ai/                          # AI Teacher Copilot package
-│       ├── provider_manager.py      # Gemini / OpenAI / Offline router
-│       ├── prompt_templates.py      # Grounded pedagogical prompt templates
-│       ├── context_builder.py       # Grounded student context synthesis
-│       ├── response_parser.py       # Structured JSON & Markdown parser
-│       └── offline_engine.py        # Deterministic offline rule engine
-│
-├── desktop/                         # PySide6 Desktop GUI (Premium Dark UI)
-│   ├── app.py                       # Application controller & window stack
-│   ├── theme.py                     # Centralized design tokens & stylesheet
-│   ├── dashboard.py                 # Academic Intelligence Command Center
-│   ├── student_profile_dialog.py    # Interactive Student 360° modal
-│   ├── interventions_view.py        # Intervention pipeline & delta evaluation
-│   ├── reports_view.py              # PDF/CSV report generation center
-│   ├── ai_assistant_view.py         # AI Teacher Copilot chat view
-│   └── widgets/                     # Reusable PySide6 UI component library
-│
-├── web/                             # Flask Web Console
-│   ├── app.py                       # Flask server factory & blueprint registration
-│   ├── routes/                      # Modular endpoint controllers
-│   ├── static/css/style.css         # Dark glassmorphism stylesheet
-│   └── templates/                   # Jinja2 presentation templates
-│
-├── tests/                           # Comprehensive Unit & Integration Test Suites
-│   ├── test_core.py                 # Core CRUD, auth, wellness, token parity
-│   ├── test_profile_service.py      # Student 360° Single Source of Truth
-│   ├── test_risk_engine.py          # Explainable 0-100 risk calculations
-│   ├── test_copilot.py              # AI actions & offline fallback failover
-│   ├── test_reports.py              # Vector PDF and CSV generation
-│   ├── test_intervention_service.py # Intervention baselines, deltas, effectiveness
-│   ├── test_notifications.py        # Deduplication, escalation, milestones
-│   └── test_command_center.py       # Executive aggregation & smart actions
-│
-└── documentation/                   # CBSE Project Defense & Guides
-    └── VIVA_PREPARATION_GUIDE.md    # Complete viva voce defense questions & answers
+================================================================================
+CURRENT MILESTONE:
+  PMLA-SCWE Version 2.0 — Phase 1 COMPLETE & VERIFIED
+
+NEXT SCHEDULED MILESTONE:
+  PMLA-SCWE Version 2.0 — Phase 2A PENDING
+  (Desktop AuthenticatedUser Context and Desktop RBAC Integration)
+================================================================================
 ```
 
 ---
 
-## 🔒 Security & Data Integrity
-- Passwords are encrypted using **PBKDF2-HMAC-SHA256** with unique salts and 100,000 hash iterations.
-- Non-autonomous AI guardrails enforce teacher confirmation for all intervention recommendations.
-- Automatic database migrations ensure non-destructive schema evolution for MySQL and SQLite.
+## Key Features (Implemented & Active)
+
+- **Hierarchical Multi-School Tenancy**: Root `Organizations` $\rightarrow$ operational `Schools` $\rightarrow$ scoped `Users` and `Students`.
+- **Role-Based Access Control (RBAC)**: Centralized `AuthenticatedUser` context supporting `Admin`, `Teacher`, and `Viewer` roles with server-side identity revalidation and school boundary scoping.
+- **Student 360° Intelligence Profile**: Single Source of Truth (SSoT) aggregating attendance, assessment trends, cyber audits, and interventions into an interactive profile.
+- **Learning Health Score (LHS)**: Composite metric combining Academic Performance (40%), Daily Attendance (40%), and Digital Cyber-Wellbeing (20%).
+- **Predictive Trajectory Forecasting**: OLS Linear Regression ($y = mx + c$) over longitudinal progress scores to forecast future exam performance.
+- **Explainable Multi-Factor Risk Engine**: Transparent 0–100 risk scoring with deterministic evidence bullets (academic deficits, attendance below CBSE 75%, digital distraction).
+- **Closed-Loop Intervention Tracking**: Automatically captures pre-intervention baseline snapshots (`pre_risk`, `pre_lhs`, `pre_academic`) and computes before-vs-after delta recovery metrics.
+- **AI Teacher Copilot**: Pedagogical advisory assistant supporting Google Gemini, OpenAI, and a deterministic offline rule engine.
+- **Professional Vector PDF Reporting**: Publication-grade ReportLab vector PDF generator with embedded charts, KPI summary tables, and safety notices.
+- **Smart Decision-Support Notifications**: Priority alerts with `dedup_key` hashing, 7-day cooldowns, and milestone celebration chips.
+- **Dual-Backend Database Layer**: MySQL 8.0+ primary backend with automated, zero-configuration SQLite3 fallback (`pmla_scwe_fallback.db`).
+- **Versioned Migration Engine**: Idempotent migration runner (`core/migration_service.py`) with pre-migration SQLite snapshots and zero data loss assertions.
+
+---
+
+## Architecture Overview
+
+```text
+                           PMLA-SCWE ARCHITECTURE
+                                     │
+      ┌──────────────────────────────┴──────────────────────────────┐
+      ▼                                                             ▼
+┌───────────────────────────┐                         ┌───────────────────────────┐
+│  PySide6 Desktop Client   │                         │     Flask Web Console     │
+│  (Qt 6 Dark Modern Theme) │                         │  (Jinja2 Glassmorphism)   │
+└───────────────────────────┘                         └───────────────────────────┘
+      │                                                             │
+      └──────────────────────────────┬──────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                          SHARED CORE SERVICES (core/)                           │
+│  • tenant_service.py               • auth_service.py (PBKDF2)                   │
+│  • authorization_service.py (RBAC) • user_service.py                            │
+│  • student_profile_service.py      • student_service.py                         │
+│  • risk_engine.py & explainability • analytics.py (OLS Regression & LHS)        │
+│  • intervention_service.py         • intervention_analytics.py                  │
+│  • command_center_service.py       • notification_service.py                    │
+│  • report_service.py (ReportLab)   • ai_assistant.py (Gemini/OpenAI/Offline)    │
+│  • migration_service.py            • backup_service.py (Snapshots)              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         DATABASE ABSTRACTION LAYER                              │
+│                                (database.py)                                    │
+│          ├── MySQL 8.0+ Primary Backend (Port 3306)                             │
+│          └── SQLite3 Automatic Offline Fallback (pmla_scwe_fallback.db)         │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## User Roles & Capabilities
+
+| Capability / Action | Service Enforcement Function | Admin | Teacher | Viewer |
+| :--- | :--- | :---: | :---: | :---: |
+| **System User Administration** | `can_manage_users(user)` | **ALLOW** | DENY | DENY |
+| **Manage Organizations & Schools**| `can_manage_organizations(user)`| **ALLOW** | DENY | DENY |
+| **School Access Scope** | `has_school_access(user, school_id)`| **ALL SCHOOLS**| Assigned School Only | Assigned School Only |
+| **Register & Edit Students** | `can_modify_students(user)` | **ALLOW** | **ALLOW** | DENY (Read-Only) |
+| **Record Attendance Logs** | `can_record_attendance(user)` | **ALLOW** | **ALLOW** | DENY (Read-Only) |
+| **Create Remedial Interventions**| `can_create_interventions(user)`| **ALLOW** | **ALLOW** | DENY (Read-Only) |
+| **View Analytics & Dashboards** | `can_view_analytics(user)` | **ALLOW** | **ALLOW** | **ALLOW** |
+| **Generate & Export PDF Reports**| `can_generate_reports(user)` | **ALLOW** | **ALLOW** | **ALLOW** |
+
+---
+
+## Quick Start & Installation
+
+### 1. Automated Setup (Windows)
+Double-click `setup_and_run.bat` or run:
+```cmd
+setup_and_run.bat
+```
+
+### 2. Cross-Platform Python Setup Utility
+```powershell
+.venv\Scripts\python.exe scripts\setup_project.py
+```
+
+### 3. Step-by-Step Manual Setup
+```powershell
+# 1. Open directory
+cd d:\PMLA-SCWE
+
+# 2. Create virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Copy configuration template
+Copy-Item .env.example .env
+
+# 5. Run diagnostics
+python diagnose_setup.py
+
+# 6. Launch PySide6 Desktop GUI (Default Admin: admin / admin123)
+python main.py
+
+# 7. Launch Flask Web Console (http://127.0.0.1:5000)
+python main.py --web
+```
+
+---
+
+## Database Modes & Migration
+
+### Dual Database Modes
+- **MySQL Primary Mode**: Default when MySQL Server is listening on port 3306 with credentials configured in `.env`.
+- **SQLite Fallback Mode**: Engaged automatically if MySQL is unavailable. Uses `pmla_scwe_fallback.db`.
+
+### Running Database Migrations
+To execute the Version 2.0 Phase 1 multi-school tenancy migration:
+```powershell
+.venv\Scripts\python.exe -m database.migrations.v2_0_phase_1
+```
+
+---
+
+## Automated Verification & Test Suite
+
+All 78 unit tests and the end-to-end smoke test have been verified:
+
+```powershell
+# Run full unit test suite
+.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
+# Result: Ran 78 tests in 92.201s — OK
+
+# Run Version 2.0 Phase 1 Smoke Test
+.venv\Scripts\python.exe tests\smoke_test_v2.py
+# Result: ALL 5 SMOKE TEST CHECKPOINTS PASSED!
+```
+
+---
+
+## Authoritative Documentation Directory
+
+Complete system documentation is available in the [`documentation/`](file:///d:/PMLA-SCWE/documentation/) directory:
+
+- 📘 [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md) — Comprehensive master technical reference (50 topics).
+- 📜 [PROJECT_EVOLUTION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_EVOLUTION.md) — Chronological history from early prototype to Version 2.0.
+- 🏗️ [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md) — Architectural blueprints, SOA layers, and flowcharts.
+- 🗄️ [DATABASE_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/DATABASE_ARCHITECTURE.md) — Dual backend routing, 13-table schema, and indexes.
+- 🔐 [AUTHENTICATION_AND_RBAC.md](file:///d:/PMLA-SCWE/documentation/AUTHENTICATION_AND_RBAC.md) — Security specifications, PBKDF2 hashing, and RBAC matrix.
+- 🚀 [INSTALLATION_AND_SETUP.md](file:///d:/PMLA-SCWE/documentation/INSTALLATION_AND_SETUP.md) — Start-to-finish installation runbook and troubleshooting.
+- 🔄 [MIGRATION_AND_BACKUP_GUIDE.md](file:///d:/PMLA-SCWE/documentation/MIGRATION_AND_BACKUP_GUIDE.md) — Migration runbooks, row-count parity, and backups.
+- 🧪 [TESTING_AND_VERIFICATION.md](file:///d:/PMLA-SCWE/documentation/TESTING_AND_VERIFICATION.md) — Test suite documentation, smoke tests, and test isolation.
+- 🗺️ [DEVELOPMENT_ROADMAP.md](file:///d:/PMLA-SCWE/documentation/DEVELOPMENT_ROADMAP.md) — Strategic roadmap and Version 2.0 Phase 2A resume marker.
+- 📋 [REPOSITORY_CLEANUP_AND_CONSOLIDATION_REPORT.md](file:///d:/PMLA-SCWE/documentation/REPOSITORY_CLEANUP_AND_CONSOLIDATION_REPORT.md) — Maintenance audit and checkpoint report.
+
+---
+
+## Security Guidelines
+
+- **Environment Secrets**: Never commit `.env` or API credentials to Git.
+- **Authoritative Authorization**: Service-side permission checks in `core/authorization_service.py` are authoritative and re-verify database state.
+- **SQL Sanitization**: All database interaction utilizes parameterized queries to prevent SQL injection.
+
+---
+
+## License
+
+Developed for educational analytics, research, and institutional intelligence.

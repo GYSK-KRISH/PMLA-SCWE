@@ -22,7 +22,7 @@ from core.authorization_service import (
     has_org_access,
     get_authenticated_user_context,
 )
-from core.database import initialize_database
+from core.database import initialize_database, execute_non_query
 from core import user_service, tenant_service
 
 
@@ -32,6 +32,7 @@ class TestAuthorizationService(unittest.TestCase):
         initialize_database()
 
     def setUp(self):
+        self._cleanup_test_data()
         self.def_org = tenant_service.get_default_organization()
         self.def_school = tenant_service.get_default_school()
         self.org_id = self.def_org["organization_id"]
@@ -60,7 +61,7 @@ class TestAuthorizationService(unittest.TestCase):
         self.viewer_user = AuthenticatedUser(
             user_id=103,
             username="viewer_user",
-            full_name="Auditor Viewer",
+            full_name="Viewer Test",
             role=ROLE_VIEWER,
             organization_id=self.org_id,
             school_id=self.school_id,
@@ -70,12 +71,21 @@ class TestAuthorizationService(unittest.TestCase):
         self.inactive_user = AuthenticatedUser(
             user_id=104,
             username="inactive_user",
-            full_name="Inactive Person",
+            full_name="Inactive Test",
             role=ROLE_TEACHER,
             organization_id=self.org_id,
             school_id=self.school_id,
             is_active=False,
         )
+
+    def tearDown(self):
+        self._cleanup_test_data()
+
+    def _cleanup_test_data(self):
+        try:
+            execute_non_query("DELETE FROM Users WHERE username = %s", ("auth_test_teacher",))
+        except Exception:
+            pass
 
     def test_authenticated_user_dataclass_conversions(self):
         """Verify dictionary serialization and deserialization."""

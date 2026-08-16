@@ -5,6 +5,12 @@
 **Academic Year:** 2026–2027  
 **Platform Version:** Version 1.8 (Submission Edition)
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (CBSE Final Project Report Archive)**  
+> This report is preserved for academic submission and examination records. For active Version 2.0 system documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
+
 ---
 
 ## 1. Certificate & Declaration

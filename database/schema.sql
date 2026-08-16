@@ -1,4 +1,9 @@
--- Schema for PMLA-SCWE Version 2.0 (Multi-School Multi-Tenancy Architecture)
+-- ============================================================================
+-- PMLA-SCWE MASTER DATABASE DDL SCHEMA (AUTHORITATIVE SOURCE)
+-- File: database/schema.sql
+-- Checkpoint: Version 2.0 Phase 1 (Multi-School Tenancy & RBAC Foundation)
+-- ============================================================================
+
 CREATE DATABASE IF NOT EXISTS pmla_scwe;
 USE pmla_scwe;
 

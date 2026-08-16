@@ -1,4 +1,10 @@
--- Schema for PMLA-SCWE Version 2.0 (Multi-School Multi-Tenancy Architecture)
+-- ============================================================================
+-- PMLA-SCWE DATABASE DDL SCHEMA (ROOT COMPATIBILITY MIRROR)
+-- File: schema.sql (Mirror of authoritative source: database/schema.sql)
+-- Checkpoint: Version 2.0 Phase 1 (Multi-School Tenancy & RBAC Foundation)
+-- Note: Authoritative schema definition is maintained in database/schema.sql.
+-- ============================================================================
+
 CREATE DATABASE IF NOT EXISTS pmla_scwe;
 USE pmla_scwe;
 

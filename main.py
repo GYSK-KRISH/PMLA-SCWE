@@ -1,6 +1,6 @@
 """Main entry point for PMLA-SCWE.
 
-Launches the CustomTkinter desktop app by default.
+Launches the PySide6 desktop app by default.
 Run with '--web' option to start the Flask web application instead.
 """
 

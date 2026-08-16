@@ -1,8 +1,13 @@
-# PMLA-SCWE: 12-Slide Presentation Deck & Defense Script
+# PMLA-SCWE: 12-Slide Master Presentation Deck & Defense Script
 
-**CBSE Class XII Informatics Practices / Computer Science Board Defense**  
-**Project Title:** PMLA-SCWE (Predictive Micro-Learning Analytics & Student Cyber-Wellbeing Engine)  
-**Version:** 1.8 Submission Edition
+**CBSE Class XII Informatics Practices / Computer Science Project Defense**  
+**Platform Version:** Version 1.8 (Submission Edition)
+
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Presentation & Slide Outline Archive)**  
+> This file is preserved for presentation and viva defense reference. For active Version 2.0 system documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
 
 ---
 

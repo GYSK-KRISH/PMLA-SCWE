@@ -1,6 +1,13 @@
 # PMLA-SCWE Version 2.0 — Migration Guide (Phase 1)
 ## Safe Multi-School Tenancy & Schema Upgrade Runbook
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Phase 1 Migration Runbook)**  
+> This file is preserved for historical reference. For the active, consolidated migration and backup documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Migration & Backup Guide: [MIGRATION_AND_BACKUP_GUIDE.md](file:///d:/PMLA-SCWE/documentation/MIGRATION_AND_BACKUP_GUIDE.md)
+> - Database Architecture: [DATABASE_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/DATABASE_ARCHITECTURE.md)
+
 ---
 
 ## 1. Overview & Safety Principles

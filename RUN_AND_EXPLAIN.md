@@ -1,6 +1,11 @@
 # PMLA-SCWE: Comprehensive Presentation & Running Guide
 
-This guide is designed to help you run the **PMLA-SCWE** application on any computer and explain every line of code, math formula, and database concept to your evaluator to secure full marks.
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Defense & Theory Explanation Guide)**  
+> This file is preserved for historical and practical viva reference. For current system documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
+> - Main Overview: [README.md](file:///d:/PMLA-SCWE/README.md)
 
 ---
 

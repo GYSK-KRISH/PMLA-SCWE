@@ -30,20 +30,40 @@ env/
 venv/
 ENV/
 
+# Python testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
 # IDE files
 .vscode/
 .idea/
 *.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 
 # Environment Variables & Secrets
 .env
-*.env
+.env.*
 !.env.example
 
-# SQLite runtime files (keep fallback database template)
+# SQLite runtime files (preserve fallback database template pmla_scwe_fallback.db)
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Temporary test backup snapshots (preserve official baseline pre-migration snapshots)
+database/backups/*unit_test*.db
 
 # Generated sample reports output
 reports/*.pdf

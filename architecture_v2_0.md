@@ -1,6 +1,13 @@
 # PMLA-SCWE Version 2.0 — Architecture Specification
 ## Multi-School Tenancy & Role-Based Authorization Foundation (Phase 1)
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Phase 1 Design Record)**  
+> This file is preserved for historical reference. For the active, consolidated system documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Current Architecture: [CURRENT_SYSTEM_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/CURRENT_SYSTEM_ARCHITECTURE.md)
+> - Database Architecture: [DATABASE_ARCHITECTURE.md](file:///d:/PMLA-SCWE/documentation/DATABASE_ARCHITECTURE.md)
+
 ---
 
 ## 1. Executive Overview & Tenancy Model

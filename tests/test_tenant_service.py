@@ -12,6 +12,19 @@ class TestTenantService(unittest.TestCase):
     def setUpClass(cls):
         initialize_database()
 
+    def setUp(self):
+        self._cleanup_test_data()
+
+    def tearDown(self):
+        self._cleanup_test_data()
+
+    def _cleanup_test_data(self):
+        try:
+            execute_non_query("DELETE FROM Schools WHERE code = %s", ("NORTH_CAMPUS",))
+            execute_non_query("DELETE FROM Organizations WHERE code = %s", ("TEST_ORG_ALPHA",))
+        except Exception:
+            pass
+
     def test_default_organization_and_school_provisioning(self):
         """Verify dynamic provisioning and retrieval of default legacy tenant boundaries."""
         org = tenant_service.get_default_organization()

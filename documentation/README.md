@@ -1,6 +1,10 @@
-# Documentation Workspace
+# PMLA-SCWE Documentation Index
 
-This folder will contain the CBSE IP project documentation, diagrams, tables, and report content.
+> [!NOTE]
+> **PMLA-SCWE AUTHORITATIVE DOCUMENTATION REPOSITORY**  
+> This directory contains the complete technical, architectural, operational, and historical documentation for the **PMLA-SCWE** platform at the **Version 2.0 Phase 1** checkpoint.
+
+---
 
 ## MySQL Workbench Connection
 

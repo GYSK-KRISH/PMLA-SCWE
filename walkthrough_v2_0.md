@@ -1,6 +1,13 @@
 # PMLA-SCWE Version 2.0 — Phase 1 Walkthrough
 ## Multi-School Tenancy & Role-Based Authorization Foundation
 
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Phase 1 Verification Record)**  
+> This file is preserved for historical reference. For current testing, verification, and architecture reports, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Testing & Verification: [TESTING_AND_VERIFICATION.md](file:///d:/PMLA-SCWE/documentation/TESTING_AND_VERIFICATION.md)
+> - Checkpoint Report: [REPOSITORY_CLEANUP_AND_CONSOLIDATION_REPORT.md](file:///d:/PMLA-SCWE/documentation/REPOSITORY_CLEANUP_AND_CONSOLIDATION_REPORT.md)
+
 ---
 
 ## 1. Summary of Completed Deliverables

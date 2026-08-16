@@ -1,6 +1,11 @@
 # PMLA-SCWE: Desktop Computer Installation & Setup Guide
 
-This guide provides step-by-step instructions to get the **PMLA-SCWE** application up and running on a computer (running Windows and VS Code) from scratch.
+> [!NOTE]
+> **STATUS: HISTORICAL / ARCHIVAL DOCUMENT (Desktop Setup Reference)**  
+> This file is preserved for historical reference. For current, verified setup and installation documentation, see:
+> - Master Documentation: [PROJECT_MASTER_DOCUMENTATION.md](file:///d:/PMLA-SCWE/documentation/PROJECT_MASTER_DOCUMENTATION.md)
+> - Installation & Setup: [INSTALLATION_AND_SETUP.md](file:///d:/PMLA-SCWE/documentation/INSTALLATION_AND_SETUP.md)
+> - Main Overview: [README.md](file:///d:/PMLA-SCWE/README.md)
 
 ---
 
