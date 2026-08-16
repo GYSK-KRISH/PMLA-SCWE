@@ -1,287 +1,325 @@
-"""CustomTkinter panel for administrative user accounts CRUD management."""
+"""PySide6 panel for administrative user accounts CRUD management."""
 
 from __future__ import annotations
-import tkinter as tk
-import customtkinter as ctk
+from PySide6.QtWidgets import (
+    QWidget, QFrame, QLabel, QPushButton, QLineEdit, QVBoxLayout,
+    QHBoxLayout, QGridLayout, QScrollArea, QDialog, QMessageBox, QComboBox
+)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont
 
 from core import user_service
 from core.database import get_db_status
 
 
-class UsersFrame(ctk.CTkFrame):
+class UserRowWidget(QFrame):
+    def __init__(self, parent, user, edit_cmd, delete_cmd):
+        super().__init__(parent)
+        self.setObjectName("InnerCardFrame")
+        self.setFixedHeight(45)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(15, 0, 15, 0)
+        
+        uid = user["user_id"]
+        username = user["username"]
+        fullname = user["full_name"]
+        role = user["role"]
+        status = user["status"]
+        
+        name_lbl = QLabel(f"{fullname} (@{username})", self)
+        name_lbl.setStyleSheet("font-weight: bold; color: #F5F7FA; background: transparent; border: none;")
+        layout.addWidget(name_lbl, 2)
+        
+        role_lbl = QLabel(role, self)
+        role_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        layout.addWidget(role_lbl, 1)
+        
+        status_color = "#30C48D" if status == "Active" else "#E5484D"
+        status_lbl = QLabel(f"● {status}", self)
+        status_lbl.setStyleSheet(f"color: {status_color}; font-weight: bold; background: transparent; border: none;")
+        layout.addWidget(status_lbl, 1)
+        
+        # Actions Sub-widget
+        actions_widget = QWidget(self)
+        actions_layout = QHBoxLayout(actions_widget)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(5)
+        
+        edit_btn = QPushButton("Edit", actions_widget)
+        edit_btn.setFixedSize(50, 26)
+        edit_btn.clicked.connect(lambda: edit_cmd(user))
+        actions_layout.addWidget(edit_btn)
+        
+        if username != "admin":
+            delete_btn = QPushButton("Delete", actions_widget)
+            delete_btn.setStyleSheet("color: #E5484D; border: 1px solid rgba(229, 72, 77, 0.25); background-color: rgba(229, 72, 77, 0.08);")
+            delete_btn.setFixedSize(55, 26)
+            delete_btn.clicked.connect(lambda: delete_cmd(uid))
+            actions_layout.addWidget(delete_btn)
+            
+        layout.addWidget(actions_widget, 1)
+
+
+class UserFormDialog(QDialog):
+    def __init__(self, parent, user_data=None):
+        super().__init__(parent)
+        self.user_data = user_data
+        self.is_edit = user_data is not None
+        self.setWindowTitle("Edit User Settings" if self.is_edit else "Register System User")
+        self.setFixedSize(450, 420)
+        self.setStyleSheet(parent.styleSheet())
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30, 20, 30, 20)
+        
+        title_lbl = QLabel(self.windowTitle().upper(), self)
+        title_lbl.setFont(QFont("Outfit", 16, QFont.Bold))
+        title_lbl.setStyleSheet("color: #F5F7FA;")
+        title_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_lbl)
+        
+        form = QWidget(self)
+        form_layout = QGridLayout(form)
+        form_layout.setContentsMargins(0, 10, 0, 10)
+        
+        # Fields mapping
+        self.inputs = {}
+        
+        # 1. Username
+        form_layout.addWidget(QLabel("Username (unique):", form), 0, 0)
+        self.inputs["username"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["username"], 0, 1)
+        if self.is_edit:
+            self.inputs["username"].setEnabled(False) # Cannot rename username
+            
+        # 2. Full Name
+        form_layout.addWidget(QLabel("Full Name:", form), 1, 0)
+        self.inputs["full_name"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["full_name"], 1, 1)
+        
+        # 3. Privilege Role
+        form_layout.addWidget(QLabel("Privilege Role:", form), 2, 0)
+        self.role_combo = QComboBox(form)
+        self.role_combo.addItems(["Admin", "Teacher", "Viewer"])
+        form_layout.addWidget(self.role_combo, 2, 1)
+        
+        # 4. Account Status
+        form_layout.addWidget(QLabel("Account Status:", form), 3, 0)
+        self.status_combo = QComboBox(form)
+        self.status_combo.addItems(["Active", "Inactive"])
+        form_layout.addWidget(self.status_combo, 3, 1)
+        
+        # 5. Password
+        if not self.is_edit:
+            form_layout.addWidget(QLabel("Initial Password:", form), 4, 0)
+            self.inputs["password"] = QLineEdit(form)
+            self.inputs["password"].setEchoMode(QLineEdit.Password)
+            form_layout.addWidget(self.inputs["password"], 4, 1)
+            
+        layout.addWidget(form)
+        
+        # Status feedback label
+        self.status_lbl = QLabel("", self)
+        self.status_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_lbl)
+        
+        # Buttons
+        btn_box = QHBoxLayout()
+        save_btn = QPushButton("SAVE USER", self)
+        save_btn.setObjectName("PrimaryButton")
+        save_btn.clicked.connect(self.save)
+        btn_box.addWidget(save_btn)
+        
+        cancel_btn = QPushButton("CANCEL", self)
+        cancel_btn.clicked.connect(self.reject)
+        btn_box.addWidget(cancel_btn)
+        
+        layout.addLayout(btn_box)
+        
+        if self.is_edit:
+            self.load_user_data()
+
+    def load_user_data(self):
+        ud = self.user_data
+        self.inputs["username"].setText(ud["username"])
+        self.inputs["full_name"].setText(ud["full_name"])
+        self.role_combo.setCurrentText(ud.get("role", "Teacher"))
+        self.status_combo.setCurrentText(ud.get("status", "Active"))
+
+    def save(self):
+        uname = self.inputs["username"].text().strip().lower()
+        fname = self.inputs["full_name"].text().strip()
+        role_val = self.role_combo.currentText()
+        stat_val = self.status_combo.currentText()
+
+        if not fname:
+            self.status_lbl.setText("Full Name is mandatory.")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+            self.inputs["full_name"].setFocus()
+            return
+
+        try:
+            if self.is_edit:
+                if user_service.update_user(self.user_data["user_id"], self.user_data["username"], fname, role_val, stat_val):
+                    self.status_lbl.setText("User settings updated successfully!")
+                    self.status_lbl.setStyleSheet("color: #2ecc71;")
+                    QTimer.singleShot(1000, self.accept)
+                else:
+                    self.status_lbl.setText("Failed to save changes.")
+                    self.status_lbl.setStyleSheet("color: #e74c3c;")
+            else:
+                passwd = self.inputs["password"].text()
+                if not uname or not passwd:
+                    self.status_lbl.setText("Username and Password are mandatory.")
+                    self.status_lbl.setStyleSheet("color: #e74c3c;")
+                    return
+                if user_service.create_user(uname, fname, passwd, role_val, stat_val):
+                    self.status_lbl.setText("User registered successfully!")
+                    self.status_lbl.setStyleSheet("color: #2ecc71;")
+                    QTimer.singleShot(1000, self.accept)
+                else:
+                    self.status_lbl.setText("Username already exists or database error.")
+                    self.status_lbl.setStyleSheet("color: #e74c3c;")
+        except Exception as e:
+            self.status_lbl.setText(f"Error: {e}")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+
+
+class UsersFrame(QWidget):
     def __init__(self, parent, controller):
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(parent)
         self.controller = controller
 
-        # Grid configuration
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        # Main Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         # Header Section
-        header_frame = ctk.CTkFrame(self, fg_color="#0F0F0F", border_color="#2A2A2A", border_width=1, corner_radius=12, height=80)
-        header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(10, 10))
-        header_frame.grid_columnconfigure(0, weight=1)
+        header_frame = QFrame(self)
+        header_frame.setObjectName("CardFrame")
+        header_frame.setFixedHeight(60)
+        h_layout = QHBoxLayout(header_frame)
+        h_layout.setContentsMargins(20, 0, 20, 0)
+        
+        title = QLabel("USER ACCOUNTS MANAGEMENT", header_frame)
+        title.setFont(QFont("Outfit", 18, QFont.Bold))
+        title.setStyleSheet("color: #F5F7FA; background: transparent; border: none;")
+        h_layout.addWidget(title)
+        
+        layout.addWidget(header_frame)
 
-        title = ctk.CTkLabel(
-            header_frame,
-            text="USER ACCOUNTS MANAGEMENT",
-            font=ctk.CTkFont(family="Outfit", size=20, weight="bold"),
-            text_color="#FFFFFF"
-        )
-        title.grid(row=0, column=0, sticky="w", padx=20, pady=15)
-
-        # Controls & Search Panel
-        search_frame = ctk.CTkFrame(self, fg_color="#1A1A1A", border_color="#2A2A2A", border_width=1, corner_radius=12)
-        search_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
-
-        # Add User Button
-        add_btn = ctk.CTkButton(
-            search_frame,
-            text="+ ADD SYSTEM USER",
-            command=self.open_add_user_dialog,
-            fg_color="#E50914",
-            hover_color="#CC0000",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold")
-        )
-        add_btn.grid(row=0, column=0, padx=20, pady=15, sticky="w")
+        # Controls panel
+        search_frame = QFrame(self)
+        search_frame.setObjectName("CardFrame")
+        sf_layout = QHBoxLayout(search_frame)
+        sf_layout.setContentsMargins(20, 10, 20, 10)
+        
+        add_btn = QPushButton("+ ADD SYSTEM USER", search_frame)
+        add_btn.setObjectName("PrimaryButton")
+        add_btn.setFont(QFont("Outfit", 12, QFont.Bold))
+        add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.clicked.connect(self.open_add_user_dialog)
+        sf_layout.addWidget(add_btn)
+        
+        sf_layout.addStretch(1)
+        layout.addWidget(search_frame)
 
         # Table Display ScrollFrame
-        self.table_scroll = ctk.CTkScrollableFrame(
-            self,
-            fg_color="#1A1A1A",
-            border_color="#2A2A2A",
-            border_width=1,
-            corner_radius=12,
-            label_text="REGISTERED USER ROSTER",
-            label_font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            label_text_color="#FFFFFF"
-        )
-        self.table_scroll.grid(row=2, column=0, sticky="nsew", padx=20, pady=10)
-        self.table_scroll.grid_columnconfigure(0, weight=1)
+        self.table_scroll = QScrollArea(self)
+        self.table_scroll.setObjectName("CardFrame")
+        self.table_scroll.setWidgetResizable(True)
+        self.table_content = QWidget()
+        self.table_layout = QVBoxLayout(self.table_content)
+        self.table_layout.setContentsMargins(15, 15, 15, 15)
+        self.table_layout.setSpacing(6)
+        self.table_layout.setAlignment(Qt.AlignTop)
+        self.table_scroll.setWidget(self.table_content)
+        layout.addWidget(self.table_scroll, 1)
 
         # Status Bar
-        self.status_msg = ctk.CTkLabel(self, text="", font=ctk.CTkFont(size=12), text_color="#2ecc71")
-        self.status_msg.grid(row=3, column=0, pady=5)
+        self.status_msg = QLabel("", self)
+        self.status_msg.setFont(QFont("Outfit", 12))
+        self.status_msg.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_msg)
 
         # Load initial user list
         self.load_users()
 
     def load_users(self):
-        # Clear existing table rows
-        for w in self.table_scroll.winfo_children():
-            w.destroy()
+        # Clear existing roster entries
+        while self.table_layout.count() > 0:
+            item = self.table_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         users = user_service.list_users()
-        
-        # Headers
-        headers_frame = ctk.CTkFrame(self.table_scroll, fg_color="transparent")
-        headers_frame.pack(fill="x", pady=(5, 10), padx=5)
-        headers_frame.grid_columnconfigure(0, weight=2)
-        headers_frame.grid_columnconfigure(1, weight=1)
-        headers_frame.grid_columnconfigure(2, weight=1)
-        headers_frame.grid_columnconfigure(3, weight=1)
 
-        ctk.CTkLabel(headers_frame, text="User Account", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA", anchor="w").grid(row=0, column=0, sticky="w")
-        ctk.CTkLabel(headers_frame, text="Role", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA", anchor="w").grid(row=0, column=1, sticky="w")
-        ctk.CTkLabel(headers_frame, text="Status", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA", anchor="w").grid(row=0, column=2, sticky="w")
-        ctk.CTkLabel(headers_frame, text="Actions", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA", anchor="e").grid(row=0, column=3, sticky="e", padx=15)
+        # Headers
+        headers_widget = QWidget(self.table_content)
+        headers_layout = QHBoxLayout(headers_widget)
+        headers_layout.setContentsMargins(15, 5, 15, 5)
+        
+        lbl_acc = QLabel("User Account", headers_widget)
+        lbl_acc.setFont(QFont("Outfit", 12, QFont.Bold))
+        lbl_acc.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        headers_layout.addWidget(lbl_acc, 2)
+        
+        lbl_role = QLabel("Role", headers_widget)
+        lbl_role.setFont(QFont("Outfit", 12, QFont.Bold))
+        lbl_role.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        headers_layout.addWidget(lbl_role, 1)
+        
+        lbl_status = QLabel("Status", headers_widget)
+        lbl_status.setFont(QFont("Outfit", 12, QFont.Bold))
+        lbl_status.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        headers_layout.addWidget(lbl_status, 1)
+        
+        lbl_actions = QLabel("Actions", headers_widget)
+        lbl_actions.setFont(QFont("Outfit", 12, QFont.Bold))
+        lbl_actions.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        lbl_actions.setAlignment(Qt.AlignRight)
+        headers_layout.addWidget(lbl_actions, 1)
+        
+        self.table_layout.addWidget(headers_widget)
 
         if not users:
-            no_users = ctk.CTkLabel(self.table_scroll, text="No users registered in system.", text_color="#AAAAAA")
-            no_users.pack(pady=40)
+            no_users = QLabel("No users registered in system.", self.table_content)
+            no_users.setStyleSheet("color: #8D96A8;")
+            no_users.setAlignment(Qt.AlignCenter)
+            self.table_layout.addWidget(no_users)
             return
 
-        for idx, u in enumerate(users):
-            row_bg = "#1A1A1A" if idx % 2 == 0 else "#181818"
-            row_frame = ctk.CTkFrame(self.table_scroll, fg_color=row_bg, height=45, corner_radius=6)
-            row_frame.pack(fill="x", pady=2, ipady=4)
-            row_frame.grid_columnconfigure(0, weight=2)
-            row_frame.grid_columnconfigure(1, weight=1)
-            row_frame.grid_columnconfigure(2, weight=1)
-            row_frame.grid_columnconfigure(3, weight=1)
-
-            # Name info
-            name_lbl = ctk.CTkLabel(
-                row_frame,
-                text=f"{u['full_name']} (@{u['username']})",
-                font=ctk.CTkFont(family="Outfit", size=13, weight="bold"),
-                text_color="#FFFFFF"
-            )
-            name_lbl.grid(row=0, column=0, sticky="w", padx=15, pady=8)
-
-            # Role
-            role_lbl = ctk.CTkLabel(row_frame, text=u["role"], font=ctk.CTkFont(family="Outfit", size=12), text_color="#E5E5E5")
-            role_lbl.grid(row=0, column=1, sticky="w", padx=5)
-
-            # Status Badge
-            status_color = "#34A853" if u["status"] == "Active" else "#FF0000"
-            status_lbl = ctk.CTkLabel(row_frame, text=f"● {u['status']}", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color=status_color)
-            status_lbl.grid(row=0, column=2, sticky="w", padx=5)
-
-            # Actions Sub-frame
-            actions_sub = ctk.CTkFrame(row_frame, fg_color="transparent")
-            actions_sub.grid(row=0, column=3, sticky="e", padx=15)
-
-            edit_btn = ctk.CTkButton(
-                actions_sub,
-                text="Edit",
-                command=lambda user=u: self.open_edit_user_dialog(user),
-                width=50,
-                height=24,
-                fg_color="#272727",
-                hover_color="#333333",
-                text_color="#FFFFFF",
-                font=ctk.CTkFont(family="Outfit", size=11)
-            )
-            edit_btn.pack(side="left", padx=3)
-
-            # Do not allow deleting the core admin
-            if u["username"] != "admin":
-                delete_btn = ctk.CTkButton(
-                    actions_sub,
-                    text="Delete",
-                    command=lambda uid=u["user_id"]: self.confirm_delete_user(uid),
-                    width=50,
-                    height=24,
-                    fg_color="#181818",
-                    border_color="#3A1A1A",
-                    border_width=1,
-                    hover_color="#3A1616",
-                    text_color="#FF4D4D",
-                    font=ctk.CTkFont(family="Outfit", size=11)
-                )
-                delete_btn.pack(side="left", padx=3)
+        for u in users:
+            row = UserRowWidget(self.table_content, u, self.open_edit_user_dialog, self.confirm_delete_user)
+            self.table_layout.addWidget(row)
 
     def show_status(self, text: str, is_error: bool = False):
         color = "#e74c3c" if is_error else "#2ecc71"
-        self.status_msg.configure(text=text, text_color=color)
-        self.after(4000, lambda: self.status_msg.configure(text=""))
+        self.status_msg.setText(text)
+        self.status_msg.setStyleSheet(f"color: {color};")
+        QTimer.singleShot(4000, lambda: self.status_msg.clear())
 
     def confirm_delete_user(self, user_id: int):
-        confirm_win = ctk.CTkToplevel(self)
-        confirm_win.title("Delete Account")
-        confirm_win.geometry("380x160")
-        confirm_win.resizable(False, False)
-        confirm_win.transient(self.winfo_toplevel())
-        confirm_win.grab_set()
-
-        # Center
-        x = self.winfo_toplevel().winfo_x() + (self.winfo_toplevel().winfo_width() // 2) - 190
-        y = self.winfo_toplevel().winfo_y() + (self.winfo_toplevel().winfo_height() // 2) - 80
-        confirm_win.geometry(f"+{x}+{y}")
-
-        lbl = ctk.CTkLabel(confirm_win, text=f"Are you sure you want to permanently delete\nUser ID {user_id}?", font=ctk.CTkFont(family="Outfit", size=13))
-        lbl.pack(pady=20)
-
-        btn_frame = ctk.CTkFrame(confirm_win, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20)
-
-        def proceed():
+        reply = QMessageBox.question(
+            self, "Delete Account",
+            f"Are you sure you want to permanently delete User ID {user_id}?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
             if user_service.delete_user(user_id):
                 self.show_status("User account deleted.")
                 self.load_users()
             else:
                 self.show_status("Action failed.", is_error=True)
-            confirm_win.destroy()
-
-        ctk.CTkButton(btn_frame, text="DELETE", fg_color="#E50914", hover_color="#CC0000", command=proceed, width=100).pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(btn_frame, text="CANCEL", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", command=confirm_win.destroy, width=100).pack(side="right", expand=True, padx=5)
 
     def open_add_user_dialog(self):
-        self.open_user_form_dialog()
+        dialog = UserFormDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            self.load_users()
 
     def open_edit_user_dialog(self, user: dict):
-        self.open_user_form_dialog(user)
-
-    def open_user_form_dialog(self, user_data: dict | None = None):
-        form_win = ctk.CTkToplevel(self)
-        form_win.configure(fg_color="#181818")
-        is_edit = user_data is not None
-        title = "Edit User Settings" if is_edit else "Register System User"
-        form_win.title(title)
-        form_win.geometry("450x420")
-        form_win.resizable(False, False)
-        form_win.transient(self.winfo_toplevel())
-        form_win.grab_set()
-
-        # Center
-        x = self.winfo_toplevel().winfo_x() + (self.winfo_toplevel().winfo_width() // 2) - 225
-        y = self.winfo_toplevel().winfo_y() + (self.winfo_toplevel().winfo_height() // 2) - 210
-        form_win.geometry(f"+{x}+{y}")
-
-        title_lbl = ctk.CTkLabel(form_win, text=title.upper(), font=ctk.CTkFont(family="Outfit", size=16, weight="bold"), text_color="#FFFFFF")
-        title_lbl.pack(pady=15)
-
-        form_frame = ctk.CTkFrame(form_win, fg_color="transparent")
-        form_frame.pack(fill="both", expand=True, padx=30)
-
-        # Fields
-        labels_fields = [
-            ("Username (unique):", "username"),
-            ("Full Name:", "full_name")
-        ]
-        
-        widgets = {}
-        for r, (label_text, field_name) in enumerate(labels_fields):
-            ctk.CTkLabel(form_frame, text=label_text, font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA").grid(row=r, column=0, sticky="w", pady=8)
-            entry = ctk.CTkEntry(form_frame, width=220, fg_color="#1A1A1A", border_color="#303030", focused_border_color="#FF0000", text_color="#FFFFFF")
-            entry.grid(row=r, column=1, sticky="e", pady=8)
-            if is_edit:
-                entry.insert(0, str(user_data[field_name]))
-                if field_name == "username":
-                    entry.configure(state="disabled") # Cannot rename username
-            widgets[field_name] = entry
-
-        # Role Option Dropdown
-        ctk.CTkLabel(form_frame, text="Privilege Role:", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA").grid(row=2, column=0, sticky="w", pady=8)
-        role_var = tk.StringVar(value=user_data.get("role", "Teacher") if is_edit else "Teacher")
-        role_opt = ctk.CTkOptionMenu(form_frame, values=["Admin", "Teacher", "Viewer"], variable=role_var, width=120, fg_color="#1A1A1A", button_color="#E50914")
-        role_opt.grid(row=2, column=1, sticky="w", pady=8)
-
-        # Status Option Dropdown
-        ctk.CTkLabel(form_frame, text="Account Status:", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA").grid(row=3, column=0, sticky="w", pady=8)
-        status_var = tk.StringVar(value=user_data.get("status", "Active") if is_edit else "Active")
-        status_opt = ctk.CTkOptionMenu(form_frame, values=["Active", "Inactive"], variable=status_var, width=120, fg_color="#1A1A1A", button_color="#E50914")
-        status_opt.grid(row=3, column=1, sticky="w", pady=8)
-
-        # Password Entry (Only for registration)
-        widgets["password"] = None
-        if not is_edit:
-            ctk.CTkLabel(form_frame, text="Initial Password:", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#AAAAAA").grid(row=4, column=0, sticky="w", pady=8)
-            pass_entry = ctk.CTkEntry(form_frame, show="*", width=220, fg_color="#1A1A1A", border_color="#303030", focused_border_color="#FF0000", text_color="#FFFFFF")
-            pass_entry.grid(row=4, column=1, sticky="e", pady=8)
-            widgets["password"] = pass_entry
-
-        btn_frame = ctk.CTkFrame(form_win, fg_color="transparent")
-        btn_frame.pack(fill="x", side="bottom", pady=20, padx=30)
-
-        def save():
-            uname = widgets["username"].get().strip().lower()
-            fname = widgets["full_name"].get().strip()
-            role_val = role_var.get()
-            stat_val = status_var.get()
-
-            if not fname:
-                return
-
-            if is_edit:
-                if user_service.update_user(user_data["user_id"], user_data["username"], fname, role_val, stat_val):
-                    self.show_status("User settings updated.")
-                    self.load_users()
-                    form_win.destroy()
-                else:
-                    self.show_status("Failed to save changes.", is_error=True)
-            else:
-                passwd = widgets["password"].get()
-                if not uname or not passwd:
-                    return
-                if user_service.create_user(uname, fname, passwd, role_val, stat_val):
-                    self.show_status("User registered successfully.")
-                    self.load_users()
-                    form_win.destroy()
-                else:
-                    self.show_status("Username already exists or database error.", is_error=True)
-
-        ctk.CTkButton(btn_frame, text="SAVE USER", fg_color="#E50914", hover_color="#CC0000", command=save, width=120).pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(btn_frame, text="CANCEL", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", command=form_win.destroy, width=120).pack(side="right", expand=True, padx=5)
+        dialog = UserFormDialog(self, user)
+        if dialog.exec() == QDialog.Accepted:
+            self.load_users()

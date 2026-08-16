@@ -55,7 +55,36 @@ def _placeholder(conn) -> str:
         return "?"
     return "%s"
 
-def _ensure_admin(cursor, placeholder: str) -> None:
+def _ensure_tenants(cursor, placeholder: str) -> tuple[int, int]:
+    # 1. Default Organization
+    cursor.execute(f"SELECT organization_id FROM Organizations WHERE code = {placeholder}", ("DEFAULT_ORG",))
+    row = cursor.fetchone()
+    if row:
+        org_id = int(row[0])
+    else:
+        cursor.execute(
+            f"INSERT INTO Organizations (name, code, is_active) VALUES ({placeholder}, {placeholder}, 1)",
+            ("PMLA-SCWE Default Organization", "DEFAULT_ORG"),
+        )
+        cursor.execute(f"SELECT organization_id FROM Organizations WHERE code = {placeholder}", ("DEFAULT_ORG",))
+        org_id = int(cursor.fetchone()[0])
+
+    # 2. Default School
+    cursor.execute(f"SELECT school_id FROM Schools WHERE code = {placeholder}", ("DEFAULT_SCHOOL",))
+    row_s = cursor.fetchone()
+    if row_s:
+        school_id = int(row_s[0])
+    else:
+        cursor.execute(
+            f"INSERT INTO Schools (organization_id, name, code, is_active) VALUES ({placeholder}, {placeholder}, {placeholder}, 1)",
+            (org_id, "Default School", "DEFAULT_SCHOOL"),
+        )
+        cursor.execute(f"SELECT school_id FROM Schools WHERE code = {placeholder}", ("DEFAULT_SCHOOL",))
+        school_id = int(cursor.fetchone()[0])
+
+    return org_id, school_id
+
+def _ensure_admin(cursor, placeholder: str, org_id: int, school_id: int) -> None:
     hashed = hash_password(SEED_PASSWORD)
     # Seed into Admin_Login (legacy support)
     cursor.execute("SELECT COUNT(*) AS cnt FROM Admin_Login")
@@ -65,13 +94,14 @@ def _ensure_admin(cursor, placeholder: str) -> None:
             f"INSERT INTO Admin_Login (username, password_hash) VALUES ({placeholder}, {placeholder})",
             (SEED_USERNAME, hashed),
         )
-    # Seed into Users (modern multi-user access)
+    # Seed into Users (modern multi-user access with tenant scope)
     cursor.execute("SELECT COUNT(*) AS cnt FROM Users")
     count_users = int(cursor.fetchone()[0])
     if count_users == 0:
         cursor.execute(
-            f"INSERT INTO Users (username, full_name, password_hash, role, status) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})",
-            (SEED_USERNAME, "System Administrator", hashed, "Admin", "Active"),
+            f"INSERT INTO Users (username, full_name, password_hash, role, status, is_active, organization_id, school_id) "
+            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 1, {placeholder}, {placeholder})",
+            (SEED_USERNAME, "System Administrator", hashed, "Admin", "Active", org_id, school_id),
         )
 
 def _ensure_objectives(cursor, placeholder: str) -> None:
@@ -101,17 +131,18 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
     rng = Random(42)
 
     try:
-        # Disable foreign keys and wipe all tables to reset AUTO_INCREMENT to 1
+        # Disable foreign keys and wipe all operational tables to reset
         try:
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         except Exception:
             pass
             
         tables = [
-            "Attendance", "Diagnostic_Logs", "Weekly_Progress", "Cyber_Audit", 
+            "Interventions", "Attendance", "Diagnostic_Logs", "Weekly_Progress", "Cyber_Audit", 
             "Achievements", "Activity_Log", "Reports_Metadata", "Students", 
             "Admin_Login", "Learning_Objectives", "Users", "Notifications"
         ]
+
         for t in tables:
             try:
                 cursor.execute(f"DELETE FROM {t}")
@@ -133,13 +164,16 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
         print("[PASS] Existing data cleared")
         print("[PASS] Auto-increment values reset")
 
-        _ensure_admin(cursor, placeholder)
+        org_id, school_id = _ensure_tenants(cursor, placeholder)
+        print(f"[PASS] Default Organization (ID: {org_id}) and School (ID: {school_id}) ready")
+
+        _ensure_admin(cursor, placeholder, org_id, school_id)
         print("[PASS] Default administrator created")
         _ensure_objectives(cursor, placeholder)
 
         student_sql = (
-            f"INSERT INTO Students (first_name, last_name, class_section, dob, gender, email, phone, enrollment_date) "
-            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+            f"INSERT INTO Students (school_id, first_name, last_name, class_section, dob, gender, email, phone, enrollment_date) "
+            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
 
         for offset in range(target_students):
@@ -156,6 +190,7 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
             cursor.execute(
                 student_sql,
                 (
+                    school_id,
                     first_name,
                     last_name,
                     class_section,
@@ -198,8 +233,10 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
             f"INSERT INTO Reports_Metadata (student_id, report_type, generated_at, file_path) VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder})"
         )
         notification_sql = (
-            f"INSERT INTO Notifications (title, message, priority, is_read) VALUES ({placeholder}, {placeholder}, {placeholder}, 0)"
+            f"INSERT INTO Notifications (student_id, alert_type, priority, title, message, is_read, source, dedup_key, action_status) "
+            f"VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, 0, {placeholder}, {placeholder}, {placeholder})"
         )
+
 
         for index, student_id in enumerate(student_ids):
             objective_id = objective_ids[index % len(objective_ids)]
@@ -309,15 +346,55 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
 
             cursor.execute(activity_sql, (f"Seeded sample record for student {student_id}",))
 
-        # Seed initial system notifications
+        # Seed initial smart decision-support notifications
         cursor.execute(
             notification_sql,
-            ("Low Attendance Alert", "Student Aarav Sharma has attendance rate below 75%.", "HIGH")
+            (1, "ATTENDANCE", "HIGH", "Low Attendance Alert: #1 Aarav Sharma", "Student attendance rate is below 75% threshold. Intervention required.", "Analytics Engine", "att_low_1", "OPEN")
         )
         cursor.execute(
             notification_sql,
-            ("Declining Trend Warning", "Student Kavya Gupta has shown declining scores for 3 consecutive weeks.", "MEDIUM")
+            (2, "ACADEMIC_DECLINE", "MEDIUM", "Declining Trend Warning: #2 Aanya Singh", "Student has shown declining diagnostic scores across 3 consecutive assessments.", "Analytics Engine", "trend_dec_2", "IN_PROGRESS")
         )
+        cursor.execute(
+            notification_sql,
+            (3, "MILESTONE_IMPROVEMENT", "SUCCESS", "🌟 Learning Milestone: #3 Aditya Verma", "Student achieved a +18% score improvement across latest weekly progress cycles.", "Analytics Engine", "milestone_pos_3", "OPEN")
+        )
+        cursor.execute(
+            notification_sql,
+            (4, "INTERVENTION_DUE", "INFO", "Intervention Review Scheduled: #4 Anika Patel", "Scheduled peer review milestone check-in is due this week.", "Intervention Engine", "iv_due_4", "OPEN")
+        )
+
+
+        # Seed sample initial teacher interventions
+        iv_sql = (
+            f"INSERT INTO Interventions ("
+            f"  student_id, title, risk_factor, action_type, priority, status, assigned_date, target_date, "
+            f"  completed_date, teacher_notes, pre_academic_score, post_academic_score, pre_attendance_rate, "
+            f"  post_attendance_rate, pre_risk_score, post_risk_score, pre_lhs_score, post_lhs_score, "
+            f"  effectiveness_score, effectiveness_tier"
+            f") VALUES ({placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder}, {placeholder})"
+        )
+
+        cursor.execute(iv_sql, (
+            1, "1-on-1 Remedial Algebra Practice", "Low Diagnostic Score (46%)", "Remedial Practice", "HIGH", "COMPLETED",
+            "2026-07-15", "2026-08-15", "2026-08-15", "Student completed 8 problem sets. Substantial mastery recovery observed.",
+            46.0, 68.0, 65.0, 82.0, 78.0, 36.0, 48.0, 70.0, 82.5, "Highly Effective"
+        ))
+        cursor.execute(iv_sql, (
+            2, "Attendance Counseling & Morning Check-in", "Chronic Attendance Deficit", "Attendance Counseling", "HIGH", "IN_PROGRESS",
+            "2026-08-01", "2026-08-30", None, "Engaged parent guardian. Morning attendance has improved over last 7 days.",
+            62.0, None, 58.0, None, 72.0, None, 54.0, None, None, None
+        ))
+        cursor.execute(iv_sql, (
+            3, "Screen Habit Pacing & Study Hour Schedule", "Excessive Recreational Screen Time", "Screen Habit Pacing", "MEDIUM", "PENDING",
+            "2026-08-10", "2026-09-10", None, "Provided digital wellness journal template and pacing guidelines.",
+            74.0, None, 88.0, None, 45.0, None, 68.0, None, None, None
+        ))
+        cursor.execute(iv_sql, (
+            4, "Peer Study Partnership — SQL Mastery", "Database Query Difficulties", "Peer Study Support", "LOW", "PENDING",
+            "2026-08-12", "2026-09-01", None, "Paired with peer mentor for joint SQL lab exercises.",
+            60.0, None, 92.0, None, 38.0, None, 72.0, None, None, None
+        ))
 
         conn.commit()
         print("[PASS] Attendance records generated")
@@ -328,6 +405,7 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
         print("[PASS] Activity logs generated")
         print("[PASS] Report metadata generated")
         print("[PASS] System notifications generated")
+        print("[PASS] Teacher interventions seeded")
         print("\nDatabase seeding completed successfully.")
         print("==================================================")
     finally:
@@ -335,6 +413,8 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
         conn.close()
 
     return {
+        "organizations": _count_rows("Organizations"),
+        "schools": _count_rows("Schools"),
         "students": _count_rows("Students"),
         "learning_objectives": _count_rows("Learning_Objectives"),
         "admin_logins": _count_rows("Admin_Login"),
@@ -347,7 +427,9 @@ def seed_database(target_students: int = 100) -> dict[str, int]:
         "activity_log": _count_rows("Activity_Log"),
         "reports_metadata": _count_rows("Reports_Metadata"),
         "notifications": _count_rows("Notifications"),
+        "interventions": _count_rows("Interventions"),
     }
+
 
 
 if __name__ == "__main__":

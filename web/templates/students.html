@@ -39,9 +39,8 @@
               <td style="font-weight: 600;">{{ student.first_name }} {{ student.last_name }}</td>
               <td>{{ student.class_section }}</td>
               <td style="color: var(--color-text-muted);">{{ student.email or 'N/A' }}</td>
-              <td style="color: var(--color-text-muted);">{{ student.phone or 'N/A' }}</td>
               <td style="text-align: center;">
-                <a href="{{ url_for('analytics.student_analytics', student_id=student.student_id) }}" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px; font-weight: 700;">View Profile</a>
+                <a href="{{ url_for('students.student_profile', student_id=student.student_id) }}" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px; font-weight: 700; background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);">360° Profile</a>
               </td>
             </tr>
           {% endfor %}

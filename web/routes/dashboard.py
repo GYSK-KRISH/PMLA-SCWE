@@ -18,11 +18,13 @@ def view_dashboard():
 
     db_status = get_db_status()
 
-    # Load metrics from core dashboard service
+    # Load metrics from core command center service & legacy dashboard service
+    from core.command_center_service import get_executive_command_center_data
     from core.dashboard_service import get_dashboard_summary
-    data = get_dashboard_summary()
+    cmd_data = get_executive_command_center_data()
+    legacy_data = get_dashboard_summary()
 
-    # Class Performance Trend query (remains here for web Chart.js compilation)
+    # Class Performance Trend query for Chart.js
     trend_labels = []
     trend_data = []
     try:
@@ -39,12 +41,14 @@ def view_dashboard():
         "dashboard.html",
         active_tab="dashboard",
         db_status=db_status,
-        stats=data["stats"],
-        needs_attention=data["needs_attention"],
-        support_list=data["support_list"],
-        today_attendance=data["today_attendance"],
-        ai_insight=data["ai_insight"],
-        activity_rows=data["activity_timeline"],
+        command_center=cmd_data,
+        stats=legacy_data["stats"],
+        needs_attention=legacy_data["needs_attention"],
+        support_list=legacy_data["support_list"],
+        today_attendance=legacy_data["today_attendance"],
+        ai_insight=legacy_data["ai_insight"],
+        activity_rows=legacy_data["activity_timeline"],
         trend_labels=trend_labels,
         trend_data=trend_data
     )
+

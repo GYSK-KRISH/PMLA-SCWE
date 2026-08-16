@@ -6,50 +6,33 @@ This document provides a detailed step-by-step guide to demonstrate the **Predic
 
 ## 🌟 Live Project Demonstration Flow
 
-### Step 1: Pre-populate the Database (Seeding Mock Data)
-Before starting the interface, populate the database with realistic mock data to demonstrate regression trends and dashboards.
-- **Action**: Run this command in your VS Code terminal:
-  ```powershell
-  python seed_data.py
-  ```
+### Step 1: Automated Setup & Launch (One-Click)
+Instead of running setup, dependency checks, database seeding, and application launching commands individually, you can do it all in a single command:
+- **Action**: Run the automated launcher:
+  - **Windows**: Double-click `setup_and_run.bat` (or run `./setup_and_run.bat` in terminal).
+  - **macOS/Linux**: Run `./setup_and_run.sh` in terminal.
 - **Under the Hood**:
-  - The script executes the schema script to reset and construct all 12 tables.
-  - Generates exactly 100 students.
-  - Generates 10 days of attendance logs per student (simulating realistic present/absent rates).
-  - Logs 4 weeks of progress test scores per student (creating declining, improving, or stable linear trends).
-  - Adds cyber wellness audits, learning health records, and initial system notifications.
-- **Output**: Logs the initialization status and outputs a clear summary of seeded table counts.
+  - Verifies Python installation.
+  - Auto-creates the virtual environment `.venv` on the first run.
+  - Verifies package requirements and installs them (either online, or offline from the `wheels` directory).
+  - Runs the database schema verification and triggers the idempotent initialization.
+  - Presents a timed menu to choose between the **Desktop CustomTkinter Client** and the **Flask Web Server** (defaulting to the Desktop client).
 
 ---
 
-### Step 2: Run setup diagnostics
-Verify that all dependencies and databases are correctly connected.
-- **Action**: Run the diagnostics utility:
+### Step 2: Populating Clean Mock Data (Optional)
+If you want to demonstrate predictive regression trends and dashboards with a pre-seeded set of 100 sample student records:
+- **Action**: Run the seeder with the reset flag:
   ```powershell
-  python diagnose_setup.py
+  python seed_database.py --reset
   ```
 - **Under the Hood**:
-  - Validates python and virtual environment activation.
-  - Checks if required libraries are installed.
-  - Tests local MySQL connection on port 3306 and the SQLite fallback file.
-  - Checks if all 12 tables exist.
+  - Deletes any existing data and resets AUTO_INCREMENT ID counters.
+  - Generates exactly 100 mock students.
+  - Seeds 10 days of attendance logs per student.
+  - Logs 4 weeks of progress test scores per student (declining, improving, or stable linear trends).
+  - Adds cyber wellness audits, learning health records, and initial notifications.
 
----
-
-### Step 3: Launch the Application
-Start either the graphical desktop application or the Flask web console.
-- **Action**: 
-  - To launch the **Desktop GUI**:
-    ```powershell
-    python main.py
-    ```
-  - To launch the **Flask Web Server**:
-    ```powershell
-    python main.py --web
-    ```
-- **Under the Hood**:
-  - If a connection to local MySQL on port 3306 fails, the app prints a status notification and launches in fallback mode using the local SQLite file `pmla_scwe_fallback.db`.
-  - Ensures a default administrator exists (`admin` / `admin123`).
 
 ---
 
@@ -116,13 +99,8 @@ If the examiner's machine has no Internet and no MySQL server:
 2. Open terminal in the directory and run `python main.py`. The app will identify that MySQL is down and run directly on SQLite without crashing.
 
 ### Offline Package Setup
-If the target computer has no Internet to run pip install:
-1. **On a machine with internet**:
-   ```powershell
-   pip download -r requirements.txt -d ./wheels
-   ```
-2. **Copy the wheels folder** to the offline machine.
-3. **On the offline machine**:
-   ```powershell
-   pip install --no-index --find-links=./wheels -r requirements.txt
-   ```
+If the target computer has no internet connection:
+1. **On a machine with internet**: Run `download_wheels.bat` (Windows) or `download_wheels.sh` (macOS/Linux) to download all required packages into the `wheels` directory.
+2. **Copy the wheels folder** (which now contains all library files) to the offline machine inside your project folder.
+3. **On the offline machine**: Simply run `setup_and_run.bat` or `setup_and_run.sh`. The script will detect the `wheels` folder and perform the installation automatically without requiring internet.
+

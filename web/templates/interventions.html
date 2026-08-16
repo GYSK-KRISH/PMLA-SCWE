@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE Intervention Tracking & Outcomes{% endblock %}
+{% block header_title %}INTERVENTION TRACKING & OUTCOME INTELLIGENCE{% endblock %}
+
+{% block content %}
+<!-- 1. KPI Overview Summary Row -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 20px;">
+  <div class="kpi-card glass">
+    <span class="title">TOTAL TRACKED CASES</span>
+    <span class="value" style="color: #fff;">{{ kpi.total_interventions }}</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">ACTIVE IN PROGRESS</span>
+    <span class="value" style="color: #FFB224;">{{ kpi.active_count }}</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">COMPLETED & EVALUATED</span>
+    <span class="value" style="color: #30A46C;">{{ kpi.completed_count }}</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">RESOLUTION RATE</span>
+    <span class="value" style="color: var(--color-accent);">{{ kpi.resolution_rate }}%</span>
+  </div>
+</div>
+
+<!-- 2. Create Intervention & Active Pipeline Split Layout -->
+<div class="dashboard-split" style="grid-template-columns: 360px 1fr; align-items: start; margin-bottom: 25px; gap: 20px;">
+  <!-- Left Side: Create Intervention Form -->
+  <div class="panel glass" style="height: auto; padding: 20px;">
+    <h3 style="font-size: 13px; font-weight: 800; margin-bottom: 14px;">CREATE TARGETED INTERVENTION</h3>
+
+    <form id="createIvForm">
+      <div style="margin-bottom: 10px;">
+        <label for="ivStudentId" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">
+          Target Student:
+        </label>
+        <select id="ivStudentId" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;" required>
+          <option value="">Select Student...</option>
+          {% for s in students %}
+            <option value="{{ s.student_id }}">#{{ s.student_id }} — {{ s.first_name }} {{ s.last_name }} ({{ s.class_section }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label for="ivTitle" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">
+          Intervention Title / Goal:
+        </label>
+        <input type="text" id="ivTitle" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;" placeholder="e.g. 1-on-1 Algebra Remedial" required>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label for="ivRiskFactor" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">
+          Targeted Risk Factor:
+        </label>
+        <input type="text" id="ivRiskFactor" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;" placeholder="e.g. Low Mathematics Diagnostic (48%)">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-bottom: 10px;">
+        <div>
+          <label for="ivActionType" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">Category:</label>
+          <select id="ivActionType" class="form-control" style="width: 100%; font-size: 11px; padding: 6px;">
+            {% for at in action_types %}
+              <option value="{{ at }}">{{ at }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="ivPriority" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">Priority:</label>
+          <select id="ivPriority" class="form-control" style="width: 100%; font-size: 11px; padding: 6px;">
+            {% for p in priorities %}
+              <option value="{{ p }}" {% if p == 'MEDIUM' %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label for="ivTargetDate" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">
+          Target Review Date:
+        </label>
+        <input type="date" id="ivTargetDate" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label for="ivNotes" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px;">
+          Pedagogical Action Strategy:
+        </label>
+        <textarea id="ivNotes" class="form-control" rows="2" style="width: 100%; font-size: 11px; padding: 6px;" placeholder="Describe specific worksheets, counseling, or pacing checkpoints..."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="btnCreateIv" style="width: 100%; font-size: 12px; font-weight: 700; padding: 10px;">
+        ➕ Create & Snapshot Baseline
+      </button>
+    </form>
+  </div>
+
+  <!-- Right Side: Active Pipeline Table -->
+  <div class="panel glass" style="height: auto; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 style="font-size: 13px; font-weight: 800; margin: 0;">ACTIVE INTERVENTIONS PIPELINE</h3>
+      <span class="status-badge" style="background: rgba(255,178,36,0.15); color: #FFB224;">{{ active_interventions|length }} Active Cases</span>
+    </div>
+
+    {% if active_interventions %}
+      <div style="overflow-x: auto;">
+        <table class="data-table" style="width: 100%; font-size: 12px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Student</th>
+              <th>Title & Strategy</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Baseline Snapshot</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for iv in active_interventions %}
+              <tr>
+                <td><b>#{{ iv.intervention_id }}</b></td>
+                <td>
+                  <div style="font-weight: 700;">#{{ iv.student_id }} {{ iv.student_name }}</div>
+                  <div style="font-size: 10px; color: var(--text-secondary);">{{ iv.class_section }}</div>
+                </td>
+                <td>
+                  <div><b>{{ iv.title }}</b></div>
+                  <div style="font-size: 10px; color: var(--text-secondary);">{{ iv.action_type }}</div>
+                </td>
+                <td>
+                  {% if iv.priority == 'HIGH' %}
+                    <span class="status-badge danger">HIGH</span>
+                  {% elif iv.priority == 'MEDIUM' %}
+                    <span class="status-badge warning">MEDIUM</span>
+                  {% else %}
+                    <span class="status-badge success">LOW</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="status-badge {% if iv.status == 'IN_PROGRESS' %}warning{% elif iv.status == 'ESCALATED' %}danger{% else %}muted{% endif %}">
+                    {{ iv.status }}
+                  </span>
+                </td>
+                <td style="font-size: 10px; color: var(--text-secondary);">
+                  <div>Risk: <b>{{ iv.pre_risk_score or 'N/A' }}/100</b></div>
+                  <div>Acad: <b>{{ "%.0f"|format(iv.pre_academic_score or 0) }}%</b> | Att: <b>{{ "%.0f"|format(iv.pre_attendance_rate or 0) }}%</b></div>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    {% if iv.status == 'PENDING' %}
+                      <button class="btn" onclick="updateStatus({{ iv.intervention_id }}, 'IN_PROGRESS')" style="padding: 4px 6px; font-size: 10px; background: var(--color-accent); color: #fff;">
+                        ▶️ Start
+                      </button>
+                    {% endif %}
+                    <button class="btn" onclick="openEvalModal({{ iv.intervention_id }}, '{{ iv.title }}', {{ iv.student_id }}, '{{ iv.student_name }}', {{ iv.pre_risk_score or 50 }}, {{ iv.pre_academic_score or 50 }}, {{ iv.pre_attendance_rate or 75 }}, {{ iv.pre_lhs_score or 60 }})" style="padding: 4px 6px; font-size: 10px; background: #30A46C; color: #fff;">
+                      ⚡ Evaluate
+                    </button>
+                    <button class="btn" onclick="updateStatus({{ iv.intervention_id }}, 'ESCALATED')" style="padding: 4px 6px; font-size: 10px; background: #E5484D; color: #fff;">
+                      ⚠️ Escalate
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 30px 10px; color: var(--text-secondary); font-size: 12px;">
+        ✓ No active pending interventions. All student cases are currently on track.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 3. Completed & Evaluated Interventions History Section -->
+<div class="panel glass" style="height: auto; padding: 20px; margin-bottom: 25px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+    <h3 style="font-size: 13px; font-weight: 800; margin: 0;">EVALUATED INTERVENTION OUTCOMES & DELTA ANALYSIS</h3>
+    <span class="status-badge success">{{ completed_interventions|length }} Evaluated Cases</span>
+  </div>
+
+  {% if completed_interventions %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
+      {% for iv in completed_interventions %}
+        {% set d_risk = (iv.pre_risk_score or 0) - (iv.post_risk_score or 0) %}
+        {% set d_acad = (iv.post_academic_score or 0) - (iv.pre_academic_score or 0) %}
+        {% set d_att = (iv.post_attendance_rate or 0) - (iv.pre_attendance_rate or 0) %}
+        {% set d_lhs = (iv.post_lhs_score or 0) - (iv.pre_lhs_score or 0) %}
+
+        <div class="glass" style="padding: 14px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div>
+              <div style="font-size: 13px; font-weight: 800; color: #fff;">{{ iv.title }}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Student: #{{ iv.student_id }} {{ iv.student_name }} ({{ iv.class_section }})</div>
+            </div>
+            <div>
+              <span class="status-badge {% if iv.effectiveness_tier == 'Highly Effective' or iv.effectiveness_tier == 'Effective' %}success{% elif iv.effectiveness_tier == 'Moderate Improvement' %}warning{% else %}danger{% endif %}">
+                {{ iv.effectiveness_tier }} ({{ iv.effectiveness_score|default(0, true) }}%)
+              </span>
+            </div>
+          </div>
+
+          <!-- Outcome Deltas Grid -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px; text-align: center;">
+            <div>
+              <div style="font-size: 9px; color: var(--text-secondary);">Risk Change</div>
+              <div style="font-size: 11px; font-weight: 800; color: {% if d_risk > 0 %}#30A46C{% else %}#E5484D{% endif %};">
+                {% if d_risk > 0 %}-{{ "%.0f"|format(d_risk) }}{% else %}+{{ "%.0f"|format(d_risk|abs) }}{% endif %} pts
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: var(--text-secondary);">Academic Δ</div>
+              <div style="font-size: 11px; font-weight: 800; color: {% if d_acad >= 0 %}#30A46C{% else %}#E5484D{% endif %};">
+                {% if d_acad >= 0 %}+{% endif %}{{ "%.1f"|format(d_acad) }}%
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: var(--text-secondary);">Attendance Δ</div>
+              <div style="font-size: 11px; font-weight: 800; color: {% if d_att >= 0 %}#30A46C{% else %}#E5484D{% endif %};">
+                {% if d_att >= 0 %}+{% endif %}{{ "%.1f"|format(d_att) }}%
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: var(--text-secondary);">LHS Δ</div>
+              <div style="font-size: 11px; font-weight: 800; color: {% if d_lhs >= 0 %}#30A46C{% else %}#E5484D{% endif %};">
+                {% if d_lhs >= 0 %}+{% endif %}{{ "%.1f"|format(d_lhs) }}
+              </div>
+            </div>
+          </div>
+
+          {% if iv.teacher_notes %}
+            <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+              <b>Notes:</b> {{ iv.teacher_notes }}
+            </div>
+          {% endif %}
+          <div style="font-size: 10px; color: var(--text-secondary); margin-top: 6px;">
+            Assigned: {{ iv.assigned_date }} • Completed: {{ iv.completed_date }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 25px 10px; color: var(--text-secondary); font-size: 12px;">
+      No interventions evaluated yet. Evaluate active cases above to record outcomes and improvement metrics.
+    </div>
+  {% endif %}
+</div>
+
+<!-- 4. Outcome Evaluation Modal Dialog -->
+<div id="evalModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+  <div class="glass" style="background: #151925; border: 1px solid var(--border); border-radius: 10px; width: 500px; max-width: 90%; padding: 24px;">
+    <h3 id="evalModalTitle" style="font-size: 14px; font-weight: 800; margin-top: 0;">EVALUATE INTERVENTION OUTCOME</h3>
+    <p id="evalModalSubtitle" style="font-size: 11px; color: var(--text-secondary); margin-top: -6px; margin-bottom: 16px;"></p>
+
+    <!-- Baseline Indicators Box -->
+    <div style="padding: 10px; background: var(--bg-secondary); border-radius: 6px; margin-bottom: 14px; font-size: 11px;">
+      <div style="font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">BASELINE SNAPSHOT:</div>
+      <div id="evalBaselineDisplay" style="display: flex; justify-content: space-between;"></div>
+    </div>
+
+    <!-- Post Outcome Inputs -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div>
+        <label for="evalPostRisk" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: block;">Post Risk Score (0-100):</label>
+        <input type="number" id="evalPostRisk" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+      </div>
+      <div>
+        <label for="evalPostAcad" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: block;">Post Academic (%):</label>
+        <input type="number" id="evalPostAcad" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+      </div>
+      <div>
+        <label for="evalPostAtt" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: block;">Post Attendance (%):</label>
+        <input type="number" id="evalPostAtt" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+      </div>
+      <div>
+        <label for="evalPostLhs" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: block;">Post LHS (0-100):</label>
+        <input type="number" id="evalPostLhs" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label for="evalNotes" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 3px;">Teacher Evaluation Notes:</label>
+      <textarea id="evalNotes" class="form-control" rows="2" style="width: 100%; font-size: 11px; padding: 6px;" placeholder="Document outcome observations..."></textarea>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button class="btn" onclick="closeEvalModal()" style="padding: 8px 14px; background: var(--bg-secondary); color: #fff;">Cancel</button>
+      <button class="btn btn-primary" id="btnSubmitEval" onclick="submitEvaluation()" style="padding: 8px 16px; font-weight: 700;">⚡ Calculate & Complete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let activeEvalId = null;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const createForm = document.getElementById("createIvForm");
+    createForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const payload = {
+        student_id: parseInt(document.getElementById("ivStudentId").value),
+        title: document.getElementById("ivTitle").value.trim(),
+        risk_factor: document.getElementById("ivRiskFactor").value.trim(),
+        action_type: document.getElementById("ivActionType").value,
+        priority: document.getElementById("ivPriority").value,
+        target_date: document.getElementById("ivTargetDate").value,
+        teacher_notes: document.getElementById("ivNotes").value.trim()
+      };
+
+      fetch("{{ url_for('interventions.create_intervention_route') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert(`Intervention #${data.intervention_id} created successfully with baseline metrics captured!`);
+          window.location.reload();
+        } else {
+          alert(`Error: ${data.message}`);
+        }
+      })
+      .catch(err => alert("Error communicating with server: " + err.message));
+    });
+  });
+
+  function updateStatus(id, newStatus) {
+    fetch("{{ url_for('interventions.update_status_route') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intervention_id: id, status: newStatus })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert("Error updating status: " + data.message);
+      }
+    });
+  }
+
+  function openEvalModal(id, title, sid, sname, preR, preA, preAtt, preLhs) {
+    activeEvalId = id;
+    document.getElementById("evalModalTitle").textContent = `OUTCOME EVALUATION: ${title}`;
+    document.getElementById("evalModalSubtitle").textContent = `Student: #${sid} ${sname}`;
+    
+    document.getElementById("evalBaselineDisplay").innerHTML = `
+      <span>Risk: <b>${preR}/100</b></span>
+      <span>Acad: <b>${preA}%</b></span>
+      <span>Att: <b>${preAtt}%</b></span>
+      <span>LHS: <b>${preLhs}/100</b></span>
+    `;
+
+    // Populate post defaults
+    document.getElementById("evalPostRisk").value = Math.max(10, preR - 25);
+    document.getElementById("evalPostAcad").value = Math.min(100, preA + 12);
+    document.getElementById("evalPostAtt").value = Math.min(100, preAtt + 8);
+    document.getElementById("evalPostLhs").value = Math.min(100, preLhs + 15);
+    document.getElementById("evalNotes").value = "";
+
+    document.getElementById("evalModal").style.display = "flex";
+  }
+
+  function closeEvalModal() {
+    document.getElementById("evalModal").style.display = "none";
+    activeEvalId = null;
+  }
+
+  function submitEvaluation() {
+    if (!activeEvalId) return;
+
+    const payload = {
+      intervention_id: activeEvalId,
+      teacher_notes: document.getElementById("evalNotes").value.trim(),
+      overrides: {
+        risk_score: parseFloat(document.getElementById("evalPostRisk").value),
+        academic_score: parseFloat(document.getElementById("evalPostAcad").value),
+        attendance_rate: parseFloat(document.getElementById("evalPostAtt").value),
+        lhs_score: parseFloat(document.getElementById("evalPostLhs").value)
+      }
+    };
+
+    fetch("{{ url_for('interventions.evaluate_intervention_route') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert(`Evaluation Complete!\n\nOutcome Rating: ${data.effectiveness_tier} (${data.effectiveness_score}/100)\n\n${data.narrative}`);
+        window.location.reload();
+      } else {
+        alert("Evaluation Error: " + data.message);
+      }
+    })
+    .catch(err => alert("Error: " + err.message));
+  }
+</script>
+{% endblock %}

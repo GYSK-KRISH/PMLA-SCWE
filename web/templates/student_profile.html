@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+
+{% block title %}PMLA-SCWE Student 360° Profile — {{ profile.student.name if profile else 'Not Found' }}{% endblock %}
+{% block header_title %}STUDENT 360° INTELLIGENCE PROFILE{% endblock %}
+
+{% block content %}
+<!-- Back to Student Directory Link -->
+<div style="margin-bottom: 16px;">
+  <a href="{{ url_for('students.list_students') }}" class="btn" style="background-color: rgba(255,255,255,0.06); color: var(--text-primary); text-decoration: none; padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 6px;">
+    ← Back to Student Directory
+  </a>
+</div>
+
+{% if not profile %}
+  <!-- Empty State if student is not found -->
+  <div class="panel glass empty-state" style="padding: 60px 20px;">
+    <div class="icon">⚠️</div>
+    <div class="title">Student Profile Not Found</div>
+    <div class="description">No records could be retrieved for Student ID #{{ student_id }}.</div>
+    <a href="{{ url_for('students.list_students') }}" class="btn btn-primary" style="margin-top: 15px;">Return to Directory</a>
+  </div>
+{% else %}
+  {% set s = profile.student %}
+  {% set st = profile.profile_status %}
+  {% set lh = profile.learning_health %}
+  {% set acad = profile.academic %}
+  {% set att = profile.attendance %}
+  {% set prog = profile.weekly_progress %}
+  {% set well = profile.wellness %}
+  {% set pred = profile.prediction %}
+  {% set insights = profile.insights %}
+  {% set interventions = profile.interventions %}
+  {% set timeline = profile.timeline %}
+
+  <!-- 1. Student Header Card -->
+  <div class="panel glass" style="padding: 20px 25px; margin-bottom: 20px; height: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <!-- Avatar Circle -->
+        <div style="width: 56px; height: 56px; border-radius: 28px; background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
+          {{ s.first_name[0]|upper }}{{ s.last_name[0]|upper }}
+        </div>
+        <div>
+          <h2 style="font-size: 22px; font-weight: 800; color: var(--text-primary); margin: 0 0 4px 0;">{{ s.name }}</h2>
+          <div style="font-size: 12px; color: var(--text-secondary); display: flex; gap: 12px; flex-wrap: wrap;">
+            <span><b>ID:</b> {{ s.id }}</span>
+            <span>•</span>
+            <span><b>Class:</b> {{ s.class_section }}</span>
+            <span>•</span>
+            <span><b>Email:</b> {{ s.email }}</span>
+            <span>•</span>
+            <span><b>Phone:</b> {{ s.phone }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Badges Stack -->
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+        {% if lh.risk_level == 'HIGH' %}
+          <span class="status-badge danger">🔴 HIGH RISK</span>
+        {% elif lh.risk_level == 'MEDIUM' %}
+          <span class="status-badge warning">🟠 MEDIUM RISK</span>
+        {% elif lh.risk_level == 'LOW' %}
+          <span class="status-badge success">🟢 LOW RISK</span>
+        {% else %}
+          <span class="status-badge muted">⚪ DATA PENDING</span>
+        {% endif %}
+
+        {% if lh.has_data %}
+          <span class="status-badge purple">LHS: {{ lh.display }}</span>
+        {% else %}
+          <span class="status-badge muted">LHS: Pending</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Data Intelligence / Completeness Banner -->
+  <div class="panel glass" style="padding: 14px 20px; margin-bottom: 20px; height: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+      <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);">
+        📊 DATA COMPLETENESS: <span style="color: var(--color-accent);">{{ st.data_completeness }}%</span> ({{ st.confidence_level }})
+      </span>
+      <span style="font-size: 11px; color: var(--text-secondary);">
+        {% if st.data_completeness >= 75 %}
+          High confidence across academic, attendance, progress, and wellness dimensions.
+        {% else %}
+          Normalized on {{ st.data_completeness }}% currently available student records.
+        {% endif %}
+      </span>
+    </div>
+    <div class="progress-bar-wrap" style="height: 6px;">
+      <div class="progress-bar-fill purple" style="width: {{ st.data_completeness }}%;"></div>
+    </div>
+  </div>
+
+  <!-- 3. Learning Health Score Breakdown Card -->
+  <div class="panel glass" style="padding: 25px; margin-bottom: 20px; height: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+      <h3 style="margin: 0; padding: 0; border: none; font-size: 14px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-primary);">
+        🎯 LEARNING HEALTH SCORE BREAKDOWN
+      </h3>
+      <span class="status-badge purple" style="font-size: 12px;">{{ lh.label }}</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+      <!-- Academic 40% -->
+      <div style="background-color: var(--bg-secondary); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">ACADEMIC (40%)</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-primary);">{{ lh.components.academic.display }}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill red" style="width: {{ lh.components.academic.score or 0 }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Progress 25% -->
+      <div style="background-color: var(--bg-secondary); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">PROGRESS TREND (25%)</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-primary);">{{ lh.components.progress.display }}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill blue" style="width: {{ lh.components.progress.score or 0 }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Attendance 20% -->
+      <div style="background-color: var(--bg-secondary); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">ATTENDANCE (20%)</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-primary);">{{ lh.components.attendance.display }}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill green" style="width: {{ lh.components.attendance.score or 0 }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Wellness 15% -->
+      <div style="background-color: var(--bg-secondary); padding: 14px; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">WELLBEING (15%)</span>
+          <span style="font-size: 12px; font-weight: 800; color: var(--text-primary);">{{ lh.components.wellness.display }}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill orange" style="width: {{ lh.components.wellness.score or 0 }}%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Split Row 1: Academic & Attendance -->
+  <div class="dashboard-split" style="margin-bottom: 20px;">
+    <!-- Academic Card -->
+    <div class="panel glass" style="padding: 22px; height: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          📚 ACADEMIC PERFORMANCE
+        </h3>
+        <span class="status-badge purple">{{ acad.status }}</span>
+      </div>
+
+      {% if acad.has_data %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Overall Average:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ acad.display }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Assessments Completed:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ acad.total_assessments }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Strongest Topic:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--color-success);">{{ acad.best_subject }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Needs Concept Review:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--color-danger);">{{ acad.weakest_subject }}</span>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding: 24px;">
+          <div class="icon">📝</div>
+          <div class="title">No Assessments Recorded</div>
+          <div class="description">Test logs will appear here once diagnostic quizzes are logged.</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Attendance Card -->
+    <div class="panel glass" style="padding: 22px; height: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          📅 ATTENDANCE REGISTRY
+        </h3>
+        <span class="status-badge {% if att.percentage and att.percentage >= 85 %}success{% else %}danger{% endif %}">{{ att.status }}</span>
+      </div>
+
+      {% if att.has_data %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Attendance Rate:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ att.display }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Present Sessions:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--color-success);">{{ att.present_count }} days</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Absent Sessions:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--color-danger);">{{ att.absent_count }} days</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Total Tracked:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ att.total_days }} days</span>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding: 24px;">
+          <div class="icon">📅</div>
+          <div class="title">No Attendance Records</div>
+          <div class="description">Attendance entries will appear here once marked.</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 5. Split Row 2: Cyber-Wellbeing & Predictive Forecast -->
+  <div class="dashboard-split" style="margin-bottom: 20px;">
+    <!-- Cyber-Wellbeing Card -->
+    <div class="panel glass" style="padding: 22px; height: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          🛡️ CYBER-WELLBEING AUDIT
+        </h3>
+        <span class="status-badge {% if well.status == 'Concern' %}warning{% else %}success{% endif %}">{{ well.status_label }}</span>
+      </div>
+
+      {% if well.has_data %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Wellness Index:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ well.display }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Daily Screen Exposure:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ "%.1f"|format(well.daily_screen_time) }} hrs/day</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Study vs Recreational:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ "%.1f"|format(well.study_screen_time) }}h study / {{ "%.1f"|format(well.recreational_screen_time) }}h rec</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Sleep Duration:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ "%.1f"|format(well.sleep_duration) }} hrs</span>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding: 24px;">
+          <div class="icon">🛡️</div>
+          <div class="title">Wellness Audit Pending</div>
+          <div class="description">Digital wellness questionnaires will populate this section.</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Predictive Forecast Card -->
+    <div class="panel glass" style="padding: 22px; height: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          📈 PREDICTIVE FORECAST
+        </h3>
+        <span class="status-badge {% if pred.trend_direction == 'Improving' %}success{% elif pred.trend_direction == 'Declining' %}warning{% else %}blue{% endif %}">{{ pred.trend_direction }}</span>
+      </div>
+
+      {% if pred.has_data %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Forecast Next Score:</span>
+            <span style="font-size: 15px; font-weight: 800; color: var(--color-accent);">{{ pred.display }}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Most Recent Score:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ "%.1f"|format(pred.current_score) }}%</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">Regression Slope:</span>
+            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ "%.3f"|format(pred.slope) }} pts/wk</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-secondary); font-style: italic; margin-top: 4px;">
+            {{ pred.confidence_text }}
+          </span>
+        </div>
+      {% else %}
+        <div class="empty-state" style="padding: 24px;">
+          <div class="icon">📈</div>
+          <div class="title">Insufficient Trend Data</div>
+          <div class="description">Requires at least 2 weekly progress records to forecast.</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 6. Explainable Insights ("Why does this student need attention?") -->
+  <div class="panel glass" style="padding: 25px; margin-bottom: 20px; height: auto;">
+    <h3 style="margin: 0 0 14px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+      💡 WHY DOES THIS STUDENT REQUIRE ATTENTION?
+    </h3>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      {% for item in insights %}
+        <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border);">
+          <span style="color: var(--color-accent); font-weight: 800; font-size: 14px;">•</span>
+          <span style="font-size: 13px; color: var(--text-primary); line-height: 1.4;">{{ item }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 7. Recommended Teacher Interventions Checklist -->
+  <div class="panel glass" style="padding: 25px; margin-bottom: 20px; height: auto;">
+    <h3 style="margin: 0 0 14px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--color-success);">
+      ✓ RECOMMENDED INTERVENTION ACTION PLAN
+    </h3>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      {% for iv in interventions %}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <input type="checkbox" style="width: 18px; height: 18px; accent-color: var(--color-success); cursor: pointer;" aria-label="Mark intervention as completed">
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ iv.title }}</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">{{ iv.description }}</div>
+            </div>
+          </div>
+          <span class="status-badge {% if iv.priority == 'HIGH' %}danger{% elif iv.priority == 'MEDIUM' %}warning{% else %}success{% endif %}">
+            {{ iv.priority }} PRIORITY
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 8. Unified Chronological Activity Timeline -->
+  <div class="panel glass" style="padding: 25px; margin-bottom: 20px; height: auto;">
+    <h3 style="margin: 0 0 14px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+      🕒 CHRONOLOGICAL LEARNING TIMELINE
+    </h3>
+
+    {% if timeline %}
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        {% for ev in timeline[:20] %}
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid rgba(255,255,255,0.04); font-size: 13px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span>{{ ev.icon }}</span>
+              <span style="color: var(--color-accent); font-weight: 700; font-size: 12px;">{{ ev.date }}</span>
+              <span style="color: var(--text-primary);"><b>{{ ev.title }}</b> — {{ ev.description }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: 24px;">
+        <div class="icon">🕒</div>
+        <div class="title">Timeline Empty</div>
+        <div class="description">No milestones or activities logged yet.</div>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

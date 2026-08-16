@@ -4,6 +4,7 @@ from __future__ import annotations
 from flask import Blueprint, render_template, request, redirect, url_for, session
 
 from core import student_service
+from core.student_profile_service import get_student_360_profile
 from core.database import get_db_status
 
 students_bp = Blueprint("students", __name__)
@@ -29,3 +30,22 @@ def list_students():
         students=students,
         search_query=query
     )
+
+
+@students_bp.route("/students/<int:student_id>/profile")
+@students_bp.route("/students/profile/<int:student_id>")
+def student_profile(student_id: int):
+    if not session.get("logged_in"):
+        return redirect(url_for("auth.login"))
+
+    db_status = get_db_status()
+    profile = get_student_360_profile(student_id)
+
+    return render_template(
+        "student_profile.html",
+        active_tab="students",
+        db_status=db_status,
+        student_id=student_id,
+        profile=profile
+    )
+

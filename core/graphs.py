@@ -10,37 +10,41 @@ from .analytics import get_student_analytics_summary
 
 
 # Styling configurations matching premium aesthetics
-PRIMARY_COLOR = "#E50914"     # Button red
+PRIMARY_COLOR = "#E5484D"     # Button red (PMLA Red)
 SECONDARY_COLOR = "#FF7A00"   # Soft orange / Medium risk
-SUCCESS_COLOR = "#34A853"     # Emerald green / Low risk
-DANGER_COLOR = "#FF0000"      # Red / Danger
-NEUTRAL_COLOR = "#AAAAAA"     # Gray
-GRID_COLOR = "#2A2A2A"
+SUCCESS_COLOR = "#30C48D"     # Emerald green / Low risk (Success green)
+DANGER_COLOR = "#E5484D"      # Red / Danger
+NEUTRAL_COLOR = "#8D96A8"     # Gray (Muted text)
+PURPLE_COLOR = "#7C5CFF"      # Purple accent
+BLUE_COLOR = "#4D8DFF"        # Blue accent
+GRID_COLOR = "#1E2330"
+BG_CARD = "#151925"
 
 # Global Matplotlib rcParams for dark theme
-plt.rcParams['figure.facecolor'] = '#1A1A1A'
-plt.rcParams['axes.facecolor'] = '#1A1A1A'
-plt.rcParams['axes.edgecolor'] = '#2A2A2A'
-plt.rcParams['text.color'] = '#E5E5E5'
-plt.rcParams['axes.labelcolor'] = '#E5E5E5'
-plt.rcParams['xtick.color'] = '#AAAAAA'
-plt.rcParams['ytick.color'] = '#AAAAAA'
-plt.rcParams['grid.color'] = '#2A2A2A'
-plt.rcParams['legend.facecolor'] = '#1A1A1A'
-plt.rcParams['legend.edgecolor'] = '#2A2A2A'
+plt.rcParams['figure.facecolor'] = BG_CARD
+plt.rcParams['figure.dpi'] = 110
+plt.rcParams['axes.facecolor'] = BG_CARD
+plt.rcParams['axes.edgecolor'] = '#1E2330'
+plt.rcParams['text.color'] = '#F5F7FA'
+plt.rcParams['axes.labelcolor'] = '#F5F7FA'
+plt.rcParams['xtick.color'] = '#8D96A8'
+plt.rcParams['ytick.color'] = '#8D96A8'
+plt.rcParams['grid.color'] = '#1E2330'
+plt.rcParams['legend.facecolor'] = BG_CARD
+plt.rcParams['legend.edgecolor'] = '#1E2330'
 
 
 def _create_placeholder_chart(title: str, text: str, filepath: str) -> None:
     """Helper to generate a clean placeholder chart when data is missing."""
-    plt.figure(figsize=(6, 4), dpi=100)
-    plt.text(0.5, 0.5, text, ha="center", va="center", fontsize=14, color="#AAAAAA", weight="bold")
-    plt.title(title, fontsize=12, color="#FFFFFF", weight="bold")
+    plt.figure(figsize=(6, 4), dpi=110)
+    plt.text(0.5, 0.5, text, ha="center", va="center", fontsize=13, color="#8D96A8", weight="bold")
+    plt.title(title, fontsize=12, color="#F5F7FA", weight="bold")
     plt.xlim(0, 1)
     plt.ylim(0, 1)
     plt.gca().axis("off")
     plt.tight_layout()
     os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
 
 
@@ -60,7 +64,7 @@ def plot_student_progress(student_id: int) -> str:
     weeks = [str(r["week_start"]) for r in rows]
     scores = [float(r["score"]) for r in rows]
 
-    plt.figure(figsize=(7, 4), dpi=100)
+    plt.figure(figsize=(7, 4), dpi=110)
     plt.plot(weeks, scores, marker="o", color=PRIMARY_COLOR, linewidth=2, markersize=6, label="Weekly Score")
     plt.fill_between(weeks, scores, alpha=0.1, color=PRIMARY_COLOR)
     
@@ -71,7 +75,7 @@ def plot_student_progress(student_id: int) -> str:
     plt.grid(True, linestyle="--", alpha=0.5, color=GRID_COLOR)
     plt.xticks(rotation=15, ha="right", fontsize=9)
     plt.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
 
@@ -101,18 +105,18 @@ def plot_attendance(student_id: int) -> str:
         _create_placeholder_chart("Attendance Distribution", "No Attendance Records Found", filepath)
         return filepath
 
-    plt.figure(figsize=(5, 4), dpi=100)
+    plt.figure(figsize=(5, 4), dpi=110)
     wedges, texts, autotexts = plt.pie(
         sizes, labels=labels, autopct="%1.1f%%", startangle=90,
-        colors=colors, textprops=dict(color="#E5E5E5"),
-        wedgeprops=dict(width=0.4, edgecolor="#1A1A1A", linewidth=2)
+        colors=colors, textprops=dict(color="#F5F7FA"),
+        wedgeprops=dict(width=0.4, edgecolor=BG_CARD, linewidth=2)
     )
     
     plt.setp(autotexts, size=9, weight="bold")
     plt.setp(texts, size=10)
     plt.title("Attendance Distribution Profile", fontsize=12, fontweight="bold", pad=15)
     plt.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
 
@@ -137,13 +141,13 @@ def plot_cyber_wellness(student_id: int) -> str:
     recreational = [float(r["recreational_screen_time"]) for r in rows]
     scores = [float(r["wellness_score"]) for r in rows]
 
-    fig, ax1 = plt.subplots(figsize=(8, 4), dpi=100)
+    fig, ax1 = plt.subplots(figsize=(8, 4), dpi=110)
 
     # Bar chart for screen times
     x = range(len(dates))
     width = 0.25
-    ax1.bar([i - width for i in x], study, width, label="Study Screen Time", color="#3EA6FF")
-    ax1.bar(x, recreational, width, label="Recreational Screen Time", color="#FF7A00")
+    ax1.bar([i - width for i in x], study, width, label="Study Screen Time", color=BLUE_COLOR)
+    ax1.bar(x, recreational, width, label="Recreational Screen Time", color=SECONDARY_COLOR)
     ax1.bar([i + width for i in x], daily, width, label="Total Screen Time", color="#717171", alpha=0.6)
     
     ax1.set_xlabel("Audit Date", fontsize=10)
@@ -156,15 +160,15 @@ def plot_cyber_wellness(student_id: int) -> str:
 
     # Line chart for wellness score on secondary axis
     ax2 = ax1.twinx()
-    ax2.plot(dates, scores, color="#34A853", marker="D", linewidth=2.5, markersize=6, label="Wellness Index")
-    ax2.set_ylabel("Wellness Index (%)", fontsize=10, color="#34A853")
-    ax2.tick_params(axis="y", labelcolor="#34A853")
+    ax2.plot(dates, scores, color=SUCCESS_COLOR, marker="D", linewidth=2.5, markersize=6, label="Wellness Index")
+    ax2.set_ylabel("Wellness Index (%)", fontsize=10, color=SUCCESS_COLOR)
+    ax2.tick_params(axis="y", labelcolor=SUCCESS_COLOR)
     ax2.set_ylim(0, 105)
     ax2.legend(loc="upper right", fontsize=8)
 
     plt.title("Cyber-Wellness & Screen Time Overview", fontsize=12, fontweight="bold", pad=15)
     fig.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
 
@@ -192,15 +196,15 @@ def plot_learning_health(student_id: int) -> str:
         summary["attendance_percentage"],
         summary["cyber_wellness_score"]
     ]
-    colors = [PRIMARY_COLOR, SECONDARY_COLOR, SUCCESS_COLOR, "#3EA6FF"]
+    colors = [PRIMARY_COLOR, SECONDARY_COLOR, SUCCESS_COLOR, BLUE_COLOR]
 
-    plt.figure(figsize=(7, 4), dpi=100)
+    plt.figure(figsize=(7, 4), dpi=110)
     bars = plt.barh(components, scores, color=colors, height=0.5, edgecolor="none")
     
     for bar in bars:
         width = bar.get_width()
         plt.text(width + 2, bar.get_y() + bar.get_height()/2, f"{width:.1f}%", 
-                 ha="left", va="center", fontsize=9, fontweight="bold", color="#E5E5E5")
+                 ha="left", va="center", fontsize=9, fontweight="bold", color="#F5F7FA")
 
     plt.title(f"Learning Health Score Breakdown (Total: {summary['learning_health_score']:.1f}%)", 
               fontsize=12, fontweight="bold", pad=15)
@@ -208,7 +212,7 @@ def plot_learning_health(student_id: int) -> str:
     plt.xlim(0, 115)
     plt.gca().invert_yaxis()
     plt.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
 
@@ -239,7 +243,7 @@ def plot_class_performance() -> str:
         _create_placeholder_chart("Class Performance Matrix", "No Analytical Data Compiles", filepath)
         return filepath
 
-    plt.figure(figsize=(7, 4.5), dpi=100)
+    plt.figure(figsize=(7, 4.5), dpi=110)
     scatter = plt.scatter(
         wellness, academics, c=healths, cmap="plasma", 
         s=100, alpha=0.8, edgecolors="none"
@@ -252,7 +256,7 @@ def plot_class_performance() -> str:
     plt.ylabel("Academic Average Score (%)", fontsize=10)
     plt.grid(True, linestyle="--", alpha=0.4, color=GRID_COLOR)
     plt.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
 
@@ -272,7 +276,7 @@ def plot_class_performance_trend() -> str:
     weeks = [str(r["week_start"]) for r in rows]
     scores = [float(r["avg_score"]) for r in rows]
 
-    plt.figure(figsize=(6, 3.5), dpi=100)
+    plt.figure(figsize=(6, 3.5), dpi=110)
     plt.plot(weeks, scores, marker="s", color=PRIMARY_COLOR, linewidth=2.5, markersize=6, label="Class Avg")
     plt.fill_between(weeks, scores, alpha=0.1, color=PRIMARY_COLOR)
     
@@ -283,6 +287,7 @@ def plot_class_performance_trend() -> str:
     plt.grid(True, linestyle="--", alpha=0.3, color=GRID_COLOR)
     plt.xticks(rotation=15, ha="right", fontsize=8)
     plt.tight_layout()
-    plt.savefig(filepath, format="png")
+    plt.savefig(filepath, format="png", bbox_inches="tight", transparent=False, facecolor=BG_CARD)
     plt.close()
     return filepath
+

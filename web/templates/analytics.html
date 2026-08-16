@@ -1,109 +1,290 @@
 {% extends 'base.html' %}
 
-{% block title %}PMLA-SCWE Student Analytics{% endblock %}
-{% block header_title %}PREDICTIVE STUDENT ANALYTICS{% endblock %}
+{% block title %}PMLA-SCWE Explainable Predictive Analytics{% endblock %}
+{% block header_title %}EXPLAINABLE LEARNING RISK ENGINE{% endblock %}
 
 {% block content %}
-<!-- Search Panel -->
-<div class="panel glass" style="height: auto; padding: 15px; margin-bottom: 20px;">
-  <form action="{{ url_for('analytics.student_analytics') }}" method="GET" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-    <label for="student_id" style="font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">Load Student Analytics:</label>
-    <input type="number" name="student_id" id="student_id" class="form-control" placeholder="Enter Student ID (e.g. 1)" style="width: 220px; padding: 6px 12px; font-size: 13px;" value="{{ student_id or '' }}" required>
-    <input type="submit" class="btn btn-primary" value="Run Analytics" style="padding: 8px 16px;">
+<!-- 1. Class Risk Overview KPI Bar -->
+{% if class_overview %}
+<div class="panel glass" style="height: auto; padding: 16px 20px; margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+    <span style="font-size: 13px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.5px;">
+      📊 CLASSROOM RISK OVERVIEW & THREAT DISTRIBUTION
+    </span>
+    <span style="font-size: 11px; color: var(--text-secondary);">
+      Total Cohort: <b>{{ class_overview.total_students }}</b> Students | Showing: <b>{{ class_overview.filtered_count }}</b>
+    </span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 12px;">
+    <!-- High Risk -->
+    <div style="background-color: rgba(229, 72, 77, 0.08); border: 1px solid rgba(229, 72, 77, 0.25); border-radius: 8px; padding: 10px 14px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">🔴 HIGH RISK</div>
+      <div style="font-size: 22px; font-weight: 800; color: var(--color-danger); margin-top: 2px;">{{ class_overview.total_high }}</div>
+    </div>
+
+    <!-- Medium Risk -->
+    <div style="background-color: rgba(255, 178, 36, 0.08); border: 1px solid rgba(255, 178, 36, 0.25); border-radius: 8px; padding: 10px 14px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">🟡 MEDIUM RISK</div>
+      <div style="font-size: 22px; font-weight: 800; color: var(--color-warning); margin-top: 2px;">{{ class_overview.total_medium }}</div>
+    </div>
+
+    <!-- Low Risk -->
+    <div style="background-color: rgba(48, 164, 108, 0.08); border: 1px solid rgba(48, 164, 108, 0.25); border-radius: 8px; padding: 10px 14px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">🟢 LOW RISK</div>
+      <div style="font-size: 22px; font-weight: 800; color: var(--color-success); margin-top: 2px;">{{ class_overview.total_low }}</div>
+    </div>
+
+    <!-- Insufficient Data -->
+    <div style="background-color: rgba(141, 150, 168, 0.08); border: 1px solid rgba(141, 150, 168, 0.25); border-radius: 8px; padding: 10px 14px;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">⚪ INSUFFICIENT</div>
+      <div style="font-size: 22px; font-weight: 800; color: var(--text-secondary); margin-top: 2px;">{{ class_overview.total_insufficient }}</div>
+    </div>
+  </div>
+
+  <!-- Primary Concern Highlight -->
+  <div style="background-color: var(--bg-secondary); border-radius: 6px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border: 1px solid var(--border);">
+    <span style="font-size: 12px; color: var(--text-secondary);"><b>Primary Cohort Vulnerability:</b></span>
+    <span style="font-size: 12px; font-weight: 700; color: var(--color-accent);">{{ class_overview.most_common_risk_factor }}</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- 2. Filter & Selection Panel -->
+<div class="panel glass" style="height: auto; padding: 15px 20px; margin-bottom: 20px;">
+  <form action="{{ url_for('analytics.student_analytics') }}" method="GET" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+    <!-- Class Filter -->
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="class_name" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Class:</label>
+      <select name="class_name" id="class_name" class="form-control" style="width: 85px; padding: 5px 8px; font-size: 12px;" onchange="this.form.submit()">
+        {% for c in ['All', 'XII', 'XI', 'X'] %}
+          <option value="{{ c }}" {% if selected_class == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Section Filter -->
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="section" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Section:</label>
+      <select name="section" id="section" class="form-control" style="width: 80px; padding: 5px 8px; font-size: 12px;" onchange="this.form.submit()">
+        {% for s in ['All', 'A', 'B', 'C'] %}
+          <option value="{{ s }}" {% if selected_sec == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Risk Tier Filter -->
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="risk_filter" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Risk Tier:</label>
+      <select name="risk_filter" id="risk_filter" class="form-control" style="width: 140px; padding: 5px 8px; font-size: 12px;" onchange="this.form.submit()">
+        {% for r in ['All', 'HIGH', 'MEDIUM', 'LOW', 'INSUFFICIENT DATA'] %}
+          <option value="{{ r }}" {% if selected_risk == r %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Student Search -->
+    <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+      <label for="student_id" style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Student ID:</label>
+      <input type="number" name="student_id" id="student_id" class="form-control" placeholder="ID" style="width: 90px; padding: 5px 8px; font-size: 12px;" value="{{ student_id or '' }}">
+      <input type="submit" class="btn btn-primary" value="Analyze" style="padding: 6px 14px; font-size: 12px;">
+    </div>
   </form>
 </div>
 
-{% if summary %}
-  <!-- Student Profile Header -->
-  <div style="margin-bottom: 20px; background-color: rgba(26,26,46,0.6); padding: 15px 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-    <div>
-      <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 0;">{{ summary.student_name }}</h3>
-      <span style="font-size: 12px; color: var(--color-text-muted);">Class Section: {{ summary.class_section }} | Student ID: {{ summary.student_id }}</span>
-    </div>
+{% if risk_profile and summary %}
+  {% set s = risk_profile.student %}
+  {% set r_level = risk_profile.risk_level %}
+  {% set r_score = risk_profile.risk_score %}
+  {% set factors = risk_profile.factors %}
+  {% set warnings = risk_profile.early_warnings %}
+  {% set pred = risk_profile.prediction %}
 
-    <!-- DB status and badge displays -->
-    <div style="display: flex; gap: 10px;">
-      <div class="db-badge" style="background-color: #1f1f38; border-color: rgba(0, 210, 255, 0.15); color: #fff; font-size: 12px;">LHS Score: {{ "%.1f"|format(summary.learning_health_score) }}</div>
-      {% set risk_color = 'var(--color-danger)' if summary.risk_level == 'HIGH' else ('var(--color-warning)' if summary.risk_level == 'MEDIUM' else 'var(--color-success)') %}
-      <div class="db-badge" style="background-color: rgba(0,0,0,0.3); border-color: {{ risk_color }}; color: {{ risk_color }}; font-size: 12px; text-transform: uppercase; font-weight: bold;">Risk Level: {{ summary.risk_level }}</div>
+  <!-- 3. Student Identity & Quick Actions Header -->
+  <div class="panel glass" style="padding: 16px 22px; margin-bottom: 20px; height: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      <div>
+        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0 0 3px 0;">{{ s.name }}</h3>
+        <span style="font-size: 12px; color: var(--text-secondary);">Class Section: <b>{{ s.class_section }}</b> | Student ID: <b>#{{ s.id }}</b></span>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <a href="{{ url_for('students.student_profile', student_id=s.id) }}" class="btn btn-primary" style="background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%); font-size: 11px; font-weight: 700; padding: 6px 14px; text-decoration: none;">
+          ✦ Open 360° Profile
+        </a>
+
+        {% if r_level == 'HIGH' %}
+          <span class="status-badge danger">🔴 HIGH RISK ({{ r_score }}/100)</span>
+        {% elif r_level == 'MEDIUM' %}
+          <span class="status-badge warning">🟡 MEDIUM RISK ({{ r_score }}/100)</span>
+        {% elif r_level == 'LOW' %}
+          <span class="status-badge success">🟢 LOW RISK ({{ r_score }}/100)</span>
+        {% else %}
+          <span class="status-badge muted">⚪ INSUFFICIENT DATA</span>
+        {% endif %}
+
+        <div class="db-badge" style="background-color: #1f1f38; border-color: rgba(124, 92, 255, 0.3); color: #fff; font-size: 12px;">LHS: {{ "%.1f"|format(summary.learning_health_score) }}</div>
+      </div>
     </div>
   </div>
 
-  <!-- LHS Breakdown & Chart Display Split -->
+  <!-- 4. Split Layout: Explainable Risk vs Evidence & Recommendations -->
   <div class="dashboard-split" style="margin-bottom: 25px;">
-    <!-- Metric Cards Breakdown -->
-    <div class="panel glass" style="height: auto; min-height: 380px;">
-      <h3>METRIC SCORES BREAKDOWN</h3>
-      
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="padding: 12px; background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
-          <span style="font-size: 11px; font-weight: 600; color: var(--color-text-muted); display: block; text-transform: uppercase;">Academic Performance (40%)</span>
-          <span style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px; display: block;">
-            Avg Score: {{ "%.1f"|format(summary.academic_average) }}% ({{ summary.academic_status }}) | Trend: {{ summary.trend }} | Next Week Prediction: {{ "%.1f"|format(summary.predicted_next_score) }}%
+    <!-- Left Column: Risk Score + Factors + Trajectory -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Risk Score Card -->
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+            🎯 TRANSPARENT MULTI-FACTOR RISK SCORE
+          </h3>
+          <span style="font-size: 11px; color: var(--text-secondary);">Scale: 0–100</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 26px; font-weight: 800; color: var(--text-primary);">
+            {{ r_score if r_score is not None else 'N/A' }}<span style="font-size: 14px; color: var(--text-secondary);">/100</span>
+          </span>
+          <span class="status-badge {% if r_level == 'HIGH' %}danger{% elif r_level == 'MEDIUM' %}warning{% elif r_level == 'LOW' %}success{% else %}muted{% endif %}">
+            {{ r_level }} TIER
           </span>
         </div>
 
-        <div style="padding: 12px; background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
-          <span style="font-size: 11px; font-weight: 600; color: var(--color-text-muted); display: block; text-transform: uppercase;">Attendance Rate (20%)</span>
-          <span style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px; display: block;">
-            Current Attendance: {{ "%.1f"|format(summary.attendance_percentage) }}% ({{ summary.attendance_status }})
-          </span>
+        <div class="progress-bar-wrap" style="height: 8px; margin-bottom: 8px;">
+          <div class="progress-bar-fill {% if r_level == 'HIGH' %}red{% elif r_level == 'MEDIUM' %}orange{% else %}green{% endif %}" style="width: {{ r_score or 0 }}%;"></div>
         </div>
-
-        <div style="padding: 12px; background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
-          <span style="font-size: 11px; font-weight: 600; color: var(--color-text-muted); display: block; text-transform: uppercase;">Digital Behaviour (15%)</span>
-          <span style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px; display: block;">
-            Wellness Index: {{ "%.1f"|format(summary.cyber_wellness_score) }}% ({{ summary.wellness_status }}) | Daily Screen: {{ "%.1f"|format(summary.screen_time_hours) }} hours
-          </span>
-        </div>
+        <span style="font-size: 11px; color: var(--text-secondary); font-style: italic;">
+          Composite risk index calculated from academic, attendance, performance trend, screen time, and learning health deficits.
+        </span>
       </div>
-    </div>
 
-    <!-- Chart.js Visualization Panel -->
-    <div class="panel glass" style="height: auto; min-height: 380px;">
-      <h3>LEARNING HEALTH BREAKDOWN VISUALIZATION</h3>
-      <div class="chart-container">
-        <!-- Render canvas and pass attributes dynamically to js initialization -->
-        <canvas id="lhsChart" 
-                data-academic="{{ summary.academic_average }}" 
-                data-progress="{{ summary.weekly_progress }}" 
-                data-attendance="{{ summary.attendance_percentage }}" 
-                data-wellness="{{ summary.cyber_wellness_score }}"
-                data-health="{{ summary.learning_health_score }}"></canvas>
-      </div>
-    </div>
-  </div>
+      <!-- Contributing Factors Breakdown Card -->
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <h3 style="margin: 0 0 12px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          🔍 CONTRIBUTING RISK FACTORS & EVIDENCE
+        </h3>
 
-  <!-- Insights and Interventions checklist panel split -->
-  <div class="dashboard-split">
-    <!-- Insights list -->
-    <div class="panel glass" style="height: auto; min-height: 300px;">
-      <h3>EXPLAINABLE INSIGHTS</h3>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        {% for ins in insights %}
-          <div class="insights-box">
-            <span style="font-size: 13px; font-weight: 500; color: #fff;">{{ ins }}</span>
+        {% if factors %}
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for f in factors %}
+              <div style="background-color: var(--bg-secondary); border-radius: 8px; padding: 10px 14px; border: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                <div>
+                  <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">{{ f.name }}</div>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{{ f.evidence }}</div>
+                </div>
+                <span class="status-badge {% if f.impact == 'high' %}danger{% elif f.impact == 'medium' %}warning{% else %}blue{% endif %}">
+                  +{{ "%.0f"|format(f.points_contributed) }} pts ({{ f.impact|upper }})
+                </span>
+              </div>
+            {% endfor %}
           </div>
-        {% endfor %}
+        {% else %}
+          <div class="empty-state" style="padding: 20px;">
+            <div class="icon">🟢</div>
+            <div class="title">Zero Deficit Flags</div>
+            <div class="description">No active risk factors currently contributing points to risk index.</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Data-Driven Trajectory & Prediction Card -->
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+            📈 PREDICTIVE TRAJECTORY FORECAST
+          </h3>
+          <span class="status-badge {% if risk_profile.trend == 'IMPROVING' or risk_profile.trend == 'Improving' %}success{% elif risk_profile.trend == 'DECLINING' or risk_profile.trend == 'Declining' %}danger{% else %}blue{% endif %}">
+            {{ risk_profile.trend }}
+          </span>
+        </div>
+
+        {% if pred.status == 'VALID' %}
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 6px 10px; background: var(--bg-secondary); border-radius: 6px;">
+              <span style="color: var(--text-secondary);">Forecasted Next Score:</span>
+              <span style="font-weight: 700; color: var(--color-accent);">{{ "%.1f"|format(pred.predicted_score) }}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 6px 10px; background: var(--bg-secondary); border-radius: 6px;">
+              <span style="color: var(--text-secondary);">Regression Slope:</span>
+              <span style="font-weight: 700; color: var(--text-primary);">{{ "%.3f"|format(risk_profile.slope) }} pts/week</span>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); font-style: italic; margin-top: 10px;">
+            Notice: Statistical predictive indicator derived from historical quiz milestone scores. Not a guaranteed forecast.
+          </div>
+        {% else %}
+          <div class="empty-state" style="padding: 20px;">
+            <div class="icon">📈</div>
+            <div class="title">Insufficient Trend Data</div>
+            <div class="description">Requires at least 2 weekly progress observations to model regression trajectory.</div>
+          </div>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Action plan checklist -->
-    <div class="panel glass" style="height: auto; min-height: 300px;">
-      <h3 style="color: var(--color-success);">TEACHER INTERVENTION CHECKLIST</h3>
-      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 5px;">
-        {% for plan_item in plan %}
-          <div style="display: flex; align-items: center; gap: 10px; padding: 6px; background-color: rgba(255,255,255,0.01); border-radius: 4px;">
-            <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--color-success); cursor: pointer;">
-            <span style="font-size: 13px; color: #e0e0e0;">{{ plan_item }}</span>
-          </div>
-        {% endfor %}
+    <!-- Right Column: "Why?" Narrative + Early Warnings + Intervention Plan -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- "Why Does This Student Require Attention?" Card -->
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <h3 style="margin: 0 0 12px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--text-primary);">
+          💡 WHY DOES THIS STUDENT REQUIRE ATTENTION?
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for b in insights %}
+            <div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border);">
+              <span style="color: var(--color-accent); font-weight: 800; font-size: 14px;">•</span>
+              <span style="font-size: 12px; color: var(--text-primary); line-height: 1.4;">{{ b }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Early Warnings Card -->
+      {% if warnings %}
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <h3 style="margin: 0 0 12px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--color-danger);">
+          ⚠️ EARLY WARNING SYSTEM ALERTS
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for w in warnings %}
+            <div style="background-color: rgba(229, 72, 77, 0.08); border: 1px solid rgba(229, 72, 77, 0.25); border-radius: 8px; padding: 10px 14px;">
+              <div style="font-size: 12px; font-weight: 700; color: #FF7B7B;">{{ w.title }}</div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{{ w.message }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Recommended Teacher Intervention Plan -->
+      <div class="panel glass" style="padding: 20px; height: auto;">
+        <h3 style="margin: 0 0 12px 0; padding: 0; border: none; font-size: 13px; font-weight: 800; color: var(--color-success);">
+          ✓ RECOMMENDED TEACHER INTERVENTION PLAN
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          {% for act in plan %}
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" style="width: 16px; height: 16px; accent-color: var(--color-success); cursor: pointer;" aria-label="Mark intervention done">
+                <div>
+                  <div style="font-size: 12px; font-weight: 700; color: var(--text-primary);">{{ act.title }}</div>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">{{ act.description }}</div>
+                </div>
+              </div>
+              <span class="status-badge {% if act.priority == 'HIGH' %}danger{% elif act.priority == 'MEDIUM' %}warning{% else %}success{% endif %}">
+                {{ act.priority }}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </div>
 {% else %}
-  {% if student_id %}
-    <p style="color: var(--color-text-muted); text-align: center; padding: 80px;">Roster entry not loaded. Verify the Student ID and run check again.</p>
-  {% endif %}
+  <div class="panel glass empty-state" style="padding: 60px 20px;">
+    <div class="icon">🔍</div>
+    <div class="title">No Student Selected</div>
+    <div class="description">Select a filter or enter a valid Student ID to compute explainable risk metrics.</div>
+  </div>
 {% endif %}
 {% endblock %}

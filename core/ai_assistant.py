@@ -1,135 +1,147 @@
-"""Centralized AI assistant service using OpenAI or Gemini models to analyze student performance."""
+"""Centralized AI assistant facade for backward compatibility with existing views.
 
-from __future__ import annotations
-import os
-from .analytics import get_student_analytics_summary
-
-SYSTEM_PROMPT = """You are the PMLA-SCWE academic analytics assistant.
-
-You help teachers understand student academic performance,
-attendance, progress and cyber-wellness data.
-
-Explain information clearly and simply.
-
-Use only the data provided.
-
-Never invent student information.
-
-Do not provide medical or psychological diagnoses.
-
-Give practical educational suggestions.
-
-Clearly distinguish between actual student data
-and your interpretation.
+Version 1.4 — Delegates all AI logic to the modular `core.ai` package while preserving legacy signatures.
 """
 
+from __future__ import annotations
+import re
+from typing import Any
 
-def get_ai_client() -> tuple[str, object] | None:
-    """Detects and returns the configured AI client (OpenAI or Gemini)."""
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    gemini_key = os.environ.get("GEMINI_API_KEY")
+from . import ai
+from .ai.prompt_templates import SYSTEM_COPILOT_PROMPT as SYSTEM_PROMPT
 
-    if openai_key:
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=openai_key)
-            return "openai", client
-        except ImportError:
-            pass
 
-    if gemini_key:
-        try:
-            from google import genai
-            client = genai.Client(api_key=gemini_key)
-            return "gemini", client
-        except ImportError:
-            pass
+def load_ai_config() -> dict[str, Any]:
+    return ai.load_ai_config()
+
+
+def get_available_providers(cfg: dict[str, Any] | None = None) -> list[str]:
+    return ai.get_available_providers(cfg)
+
+
+def select_provider(cfg: dict[str, Any], available: list[str]) -> list[str]:
+    return ai.select_provider_order(cfg)
+
+
+def call_openai(cfg: dict[str, Any], system_prompt: str, user_prompt: str) -> str:
+    from .ai.provider_manager import call_openai as _call_openai
+    return _call_openai(cfg, system_prompt, user_prompt)
+
+
+def call_gemini(cfg: dict[str, Any], system_prompt: str, user_prompt: str) -> str:
+    from .ai.provider_manager import call_gemini as _call_gemini
+    return _call_gemini(cfg, system_prompt, user_prompt)
+
+
+def execute_with_fallback(system_prompt: str, user_prompt: str) -> dict[str, Any]:
+    return ai.execute_ai_completion(system_prompt, user_prompt)
+
+
+def get_ai_status() -> dict[str, Any]:
+    return ai.get_ai_status_summary()
+
+
+def detect_intent(query: str) -> str:
+    q = query.lower()
+    if any(k in q for k in ["class summary", "all students", "class insights", "class overview", "summary of the class"]):
+        return "class_summary"
+    if any(k in q for k in ["study plan", "revision schedule", "remedial plan", "timetable"]):
+        return "study_plan"
+    if any(k in q for k in ["weak topic", "weakest", "struggling", "gap"]):
+        return "weak_topics"
+    if any(k in q for k in ["compare", "versus", "vs", "comparison"]):
+        return "compare_students"
+    if any(k in q for k in ["parent", "letter", "guardian", "email"]):
+        return "parent_summary"
+    if any(k in q for k in ["intervention", "action plan", "remedial"]):
+        return "intervention_plan"
+    if any(k in q for k in ["suggest", "advice", "teacher action", "next step"]):
+        return "teacher_actions"
+    if any(k in q for k in ["risk", "flagged", "threat"]):
+        return "risk_analysis"
+    return "general_question"
+
+
+def extract_student_id(query: str) -> int | None:
+    match = re.search(r"\bstudent\s*(?:id)?\s*#?(\d+)\b", query, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+
+    nums = re.findall(r"\b(\d+)\b", query)
+    if len(nums) == 1:
+        return int(nums[0])
 
     return None
 
 
-def ask_ai(question: str) -> str:
-    """Sends a general question to the configured AI provider and returns the response."""
-    if not question.strip():
-        return "Please enter a valid question."
-
-    client_info = get_ai_client()
-    if not client_info:
-        return "AI is not configured. Please configure GEMINI_API_KEY or OPENAI_API_KEY in your .env file."
-
-    provider, client = client_info
-
-    try:
-        if provider == "openai":
-            model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": question}
-                ],
-                temperature=0.7
-            )
-            return response.choices[0].message.content.strip()
-
-        elif provider == "gemini":
-            model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-            response = client.models.generate_content(
-                model=model,
-                contents=question,
-                config={
-                    "system_instruction": SYSTEM_PROMPT,
-                    "temperature": 0.7
-                }
-            )
-            return response.text.strip()
-
-    except Exception as e:
-        return f"AI service is currently unavailable. You can continue using normal PMLA-SCWE analytics. (Error: {e})"
-
-    return "AI configuration issue."
+def build_student_context(student_id: int) -> str:
+    ctx = ai.build_grounded_student_context(student_id)
+    return ctx["text"]
 
 
-def ask_ai_about_student(student_id: int, question: str) -> str:
-    """Sends student analytics context along with a question to the AI."""
-    summary = get_student_analytics_summary(student_id)
-    if not summary:
-        return f"Student ID {student_id} not found in the database."
-
-    # Build context summary string using only actual student data
-    context = (
-        f"Student ID: {summary['student_id']}\n"
-        f"Student Name: {summary['student_name']}\n"
-        f"Class Section: {summary['class_section']}\n"
-        f"Academic Average Score: {summary['academic_average']:.2f}% ({summary['academic_status']})\n"
-        f"Attendance Percentage: {summary['attendance_percentage']:.2f}% ({summary['attendance_status']})\n"
-        f"Cyber-Wellness Score: {summary['cyber_wellness_score']:.2f}% ({summary['wellness_status']})\n"
-        f"Weekly Progress: {summary['weekly_progress']:.2f}%\n"
-        f"Progress Trend: {summary['trend']}\n"
-        f"Learning Health Score: {summary['learning_health_score']:.2f}\n"
-        f"Risk Level: {summary['risk_level']}\n"
-        f"Risk Reasons: {', '.join(summary['risk_reasons']) if summary['risk_reasons'] else 'None'}\n"
-    )
-
-    full_prompt = (
-        f"Here is the data for the student:\n\n{context}\n"
-        f"Teacher's Question: {question}"
-    )
-
-    return ask_ai(full_prompt)
+def build_class_context() -> str:
+    ctx = ai.build_class_context()
+    return ctx["text"]
 
 
-def get_ai_suggestions(student_id: int) -> str:
-    """Retrieves AI suggestions for a student based on their metrics."""
-    question = (
-        "Provide structured educational suggestions for this student in the following format:\n\n"
-        "Academic:\n"
-        "[suggestions]\n\n"
-        "Attendance:\n"
-        "[suggestions]\n\n"
-        "Cyber Wellness:\n"
-        "[suggestions]\n\n"
-        "Teacher Action:\n"
-        "[suggestions]"
-    )
-    return ask_ai_about_student(student_id, question)
+# ---------------------------------------------------------------------------
+# Legacy Callers & High-Level Inquiries
+# ---------------------------------------------------------------------------
+
+def ask_ai(question: str) -> dict[str, Any]:
+    sid = extract_student_id(question)
+    intent = detect_intent(question)
+
+    if intent == "class_summary":
+        return ai.summarize_class_performance()
+    elif sid is not None:
+        if intent == "risk_analysis":
+            return ai.explain_student_risk(sid)
+        elif intent == "study_plan":
+            return ai.create_study_plan(sid, 7)
+        elif intent == "weak_topics":
+            return ai.identify_weak_topics(sid)
+        elif intent == "intervention_plan":
+            return ai.generate_intervention_plan(sid)
+        elif intent == "parent_summary":
+            return ai.draft_parent_summary(sid)
+        elif intent == "teacher_actions":
+            return ai.suggest_teacher_actions(sid)
+        else:
+            return ai.ask_copilot(question, student_id=sid)
+    else:
+        return ai.ask_copilot(question)
+
+
+def ask_ai_about_student(student_id: int, question: str) -> dict[str, Any]:
+    intent = detect_intent(question)
+    if intent == "risk_analysis":
+        return ai.explain_student_risk(student_id)
+    elif intent == "study_plan":
+        return ai.create_study_plan(student_id, 7)
+    elif intent == "weak_topics":
+        return ai.identify_weak_topics(student_id)
+    elif intent == "intervention_plan":
+        return ai.generate_intervention_plan(student_id)
+    elif intent == "parent_summary":
+        return ai.draft_parent_summary(student_id)
+    elif intent == "teacher_actions":
+        return ai.suggest_teacher_actions(student_id)
+    else:
+        return ai.ask_copilot(question, student_id=student_id)
+
+
+def get_ai_suggestions(student_id: int) -> dict[str, Any]:
+    return ai.suggest_teacher_actions(student_id)
+
+
+def analyze_student(student_id: int) -> dict[str, Any]:
+    return ai.explain_student_risk(student_id)
+
+
+def generate_intervention_plan(student_id: int) -> dict[str, Any]:
+    return ai.generate_intervention_plan(student_id)
+
+
+def get_class_insights() -> dict[str, Any]:
+    return ai.summarize_class_performance()

@@ -148,6 +148,58 @@ class TestCoreServices(unittest.TestCase):
         errors = wellness_service.validate_audit_data(payload_invalid)
         self.assertTrue(len(errors) >= 5)
 
+    def test_theme_tokens_present(self):
+        """Verify centralized desktop design tokens contain all required keys."""
+        from desktop.theme import COLORS
+        required_keys = [
+            "background", "secondary", "card", "card_hover",
+            "text", "muted", "purple", "blue", "red", "success", "warning"
+        ]
+        for key in required_keys:
+            self.assertIn(key, COLORS, f"Missing design token: {key}")
+            self.assertTrue(COLORS[key].startswith("#") or COLORS[key].startswith("rgba"), f"Invalid color format for {key}")
+
+    def test_web_css_has_design_tokens(self):
+        """Verify web style.css contains standard CSS custom properties and reduced-motion media query."""
+        import os
+        css_path = os.path.join(os.path.dirname(__file__), "..", "web", "static", "css", "style.css")
+        self.assertTrue(os.path.exists(css_path), "style.css not found")
+        with open(css_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        expected_tokens = [
+            "--bg-primary",
+            "--bg-secondary",
+            "--bg-card",
+            "--bg-hover",
+            "--color-primary",
+            "--color-accent",
+            "--color-success",
+            "--color-warning",
+            "--text-primary",
+            "--text-secondary",
+            "prefers-reduced-motion"
+        ]
+        for token in expected_tokens:
+            self.assertIn(token, content, f"Missing CSS token or rule: {token}")
+
+    def test_reusable_widgets_importable(self):
+        """Verify all 6 reusable UI widgets are cleanly importable from desktop.widgets."""
+        from desktop.widgets import (
+            AnimatedCard, LoadingIndicator, SectionHeader,
+            StatusBadge, AnimatedProgressBar, InfoRow,
+            SuggestedQuestionButton, EmptyState
+        )
+        self.assertTrue(callable(AnimatedCard))
+        self.assertTrue(callable(LoadingIndicator))
+        self.assertTrue(callable(SectionHeader))
+        self.assertTrue(callable(StatusBadge))
+        self.assertTrue(callable(AnimatedProgressBar))
+        self.assertTrue(callable(InfoRow))
+        self.assertTrue(callable(SuggestedQuestionButton))
+        self.assertTrue(callable(EmptyState))
+
 
 if __name__ == "__main__":
     unittest.main()
+

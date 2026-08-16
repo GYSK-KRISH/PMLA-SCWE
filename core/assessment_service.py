@@ -31,3 +31,7 @@ def get_assessment_history(student_id: int) -> list[dict[str, Any]]:
         "FROM Diagnostic_Logs WHERE student_id=%s ORDER BY test_date DESC"
     )
     return execute_query(q, (student_id,))
+
+
+get_student_scores = get_assessment_history
+

@@ -1,50 +1,98 @@
 {% extends 'base.html' %}
 
-{% block title %}PMLA-SCWE School Dashboard{% endblock %}
+{% block title %}PMLA-SCWE School Dashboard — Command Center{% endblock %}
 {% block header_title %}Dashboard Command Center{% endblock %}
 
 {% block content %}
 <!-- Friendly Welcome Section -->
-<div style="margin-bottom: 25px; padding-bottom: 10px;">
-  <h2 style="font-size: 24px; font-weight: 800; color: #FFFFFF; margin: 0;">Good Morning, Admin 👋</h2>
-  <span style="font-size: 13px; color: var(--color-text-muted);">Here's what's happening with your students today.</span>
+<div style="margin-bottom: 25px; padding-bottom: 5px;">
+  <h2 style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin: 0;">Good Morning, {{ session.get('full_name', 'Admin').split()[0] if session.get('full_name') else 'Admin' }} 👋</h2>
+  <span style="font-size: 13px; color: var(--text-secondary);">Here is today's learning intelligence overview.</span>
 </div>
 
 <!-- Four KPI Cards Grid -->
 <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
   <!-- Students KPI -->
-  <div class="kpi-card glass clickable-card" onclick="window.location.href='/students';" style="cursor: pointer; padding: 20px;">
-    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">👨🎓 TOTAL STUDENTS</span>
-    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ stats.total_students }}</span>
-    <span style="font-size: 11px; color: var(--color-text-muted);">+4 registered this month</span>
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/students';" style="cursor: pointer;">
+    <span class="title">TOTAL STUDENTS</span>
+    <span class="value" style="color: var(--text-primary);">{{ stats.total_students }}</span>
+    <span style="font-size: 11px; color: var(--text-secondary);">+4 registered this month</span>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill blue" style="width: {{ [stats.total_students * 10, 100]|min }}%;"></div>
+    </div>
   </div>
   
   <!-- Performance KPI -->
-  <div class="kpi-card glass clickable-card" onclick="window.location.href='/analytics';" style="cursor: pointer; padding: 20px;">
-    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">📊 CLASS ACADEMIC AVG</span>
-    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_academic) }}%</span>
-    <span style="font-size: 11px; color: var(--color-text-muted);">↑ 3% vs prev period</span>
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/analytics';" style="cursor: pointer;">
+    <span class="title">CLASS ACADEMIC AVG</span>
+    <span class="value" style="color: var(--text-primary);">{{ "%.1f"|format(stats.avg_academic) }}%</span>
+    <span style="font-size: 11px; color: var(--color-success);">↑ 3% vs prev period</span>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill purple" style="width: {{ stats.avg_academic }}%;"></div>
+    </div>
   </div>
 
   <!-- Attendance KPI -->
-  <div class="kpi-card glass clickable-card" onclick="window.location.href='/attendance';" style="cursor: pointer; padding: 20px;">
-    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">📅 CLASS ATTENDANCE RATE</span>
-    <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_attendance) }}%</span>
-    <span style="font-size: 11px; color: var(--color-text-muted);">↓ 2% this month</span>
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/attendance';" style="cursor: pointer;">
+    <span class="title">CLASS ATTENDANCE RATE</span>
+    <span class="value" style="color: var(--text-primary);">{{ "%.1f"|format(stats.avg_attendance) }}%</span>
+    <span style="font-size: 11px; color: var(--color-danger);">↓ 2% this month</span>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill green" style="width: {{ stats.avg_attendance }}%;"></div>
+    </div>
   </div>
 
   <!-- Cyber Wellness KPI -->
-  <div class="kpi-card glass clickable-card" onclick="window.location.href='/wellness';" style="cursor: pointer; padding: 20px;">
-    <span class="title" style="font-size: 10px; font-weight: 700; color: var(--color-text-muted);">🛡 CYBER-WELLNESS INDEX</span>
+  <div class="kpi-card glass clickable-card" onclick="window.location.href='/wellness';" style="cursor: pointer;">
+    <span class="title">CYBER-WELLNESS INDEX</span>
     {% if stats.total_students > 0 and stats.avg_wellness == 0.0 %}
-      <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">Pending</span>
+      <span class="value" style="color: var(--text-primary);">Pending</span>
       <span style="font-size: 11px; color: var(--color-warning);">Wellness audit pending</span>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill orange" style="width: 0%;"></div>
+      </div>
     {% else %}
-      <span class="value" style="color: #FFFFFF; font-size: 26px; margin: 5px 0;">{{ "%.1f"|format(stats.avg_wellness) }}%</span>
-      <span style="font-size: 11px; color: var(--color-text-muted);">Healthy overall</span>
+      <span class="value" style="color: var(--text-primary);">{{ "%.1f"|format(stats.avg_wellness) }}%</span>
+      <span style="font-size: 11px; color: var(--color-success);">Healthy overall</span>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill green" style="width: {{ stats.avg_wellness }}%;"></div>
+      </div>
     {% endif %}
   </div>
 </div>
+
+<!-- Smart Recommended Teacher Actions Banner (v1.7) -->
+{% if command_center and command_center.smart_teacher_actions %}
+<div class="panel glass" style="padding: 16px 20px; margin-bottom: 20px; border-left: 4px solid var(--color-primary); background: rgba(124, 92, 255, 0.08);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h3 style="margin: 0; font-size: 13px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
+      ⚡ SMART RECOMMENDED TEACHER ACTIONS
+    </h3>
+    <span style="font-size: 11px; color: var(--text-secondary);">Executive Decision Support</span>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    {% for act in command_center.smart_teacher_actions %}
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(21, 25, 37, 0.8); border-radius: 6px; border: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
+        <div style="flex: 1; min-width: 260px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+            <span class="status-badge {% if act.priority == 'HIGH' %}danger{% elif act.priority == 'MEDIUM' %}warning{% else %}success{% endif %}" style="font-size: 9px; padding: 2px 6px;">
+              {{ act.priority }}
+            </span>
+            <strong style="color: #F5F7FA; font-size: 12px;">{{ act.title }}</strong>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary);">{{ act.description }}</div>
+        </div>
+        <div>
+          <a href="/{{ act.target }}" class="btn btn-primary" style="padding: 5px 12px; font-size: 11px; text-decoration: none; white-space: nowrap;">
+            Take Action →
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 
 <!-- Row 1 Split: Needs Attention & Performance Trend -->
 <div class="dashboard-split" style="margin-bottom: 20px;">
@@ -54,32 +102,32 @@
     
     <div style="display: flex; flex-direction: column; gap: 8px;">
       <!-- High Risk Link -->
-      <div class="attention-row" onclick="window.location.href='/analytics';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
-        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🔴 High Risk Students</span>
-        <span style="font-size: 15px; font-weight: 800; color: #FF0000;">{{ needs_attention.high_risk }}</span>
-      </div>
+      <a href="/analytics" class="attention-row">
+        <span class="label">🔴 High Risk Students</span>
+        <span class="count" style="color: var(--color-danger);">{{ needs_attention.high_risk }}</span>
+      </a>
 
       <!-- Low Attendance Link -->
-      <div class="attention-row" onclick="window.location.href='/attendance';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
-        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🟠 Low Attendance Alerts</span>
-        <span style="font-size: 15px; font-weight: 800; color: #FF7A00;">{{ needs_attention.low_attendance }}</span>
-      </div>
+      <a href="/attendance" class="attention-row">
+        <span class="label">🟠 Low Attendance Alerts</span>
+        <span class="count" style="color: var(--color-medium);">{{ needs_attention.low_attendance }}</span>
+      </a>
 
       <!-- Wellness Alerts Link -->
-      <div class="attention-row" onclick="window.location.href='/wellness';" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;">
-        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">🟡 Cyber-Wellness Alerts</span>
-        <span style="font-size: 15px; font-weight: 800; color: var(--color-warning);">{{ needs_attention.wellness_alerts }}</span>
-      </div>
+      <a href="/wellness" class="attention-row">
+        <span class="label">🟡 Cyber-Wellness Alerts</span>
+        <span class="count" style="color: var(--color-warning);">{{ needs_attention.wellness_alerts }}</span>
+      </a>
     </div>
     
     <div style="margin-top: 15px;">
-      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: #FF4D4D; text-decoration: none;">VIEW ALL ALERTS →</a>
+      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: var(--color-primary); text-decoration: none;">VIEW ALL ALERTS →</a>
     </div>
   </div>
 
   <!-- Performance Trend Chart Panel -->
   <div class="panel glass" style="padding: 25px;">
-    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">📊 CLASS PERFORMANCE TREND</h3>
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--text-primary);">📊 CLASS PERFORMANCE TREND</h3>
     
     {% if trend_labels %}
       <div style="width: 100%; height: 160px; position: relative;">
@@ -92,7 +140,7 @@
     {% endif %}
 
     <div style="margin-top: 15px;">
-      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: #FFFFFF; text-decoration: none;">VIEW FULL ANALYTICS →</a>
+      <a href="/analytics" style="font-size: 11px; font-weight: 700; color: var(--text-primary); text-decoration: none;">VIEW FULL ANALYTICS →</a>
     </div>
   </div>
 </div>
@@ -101,7 +149,7 @@
 <div class="dashboard-split" style="margin-bottom: 20px;">
   <!-- Students Needing Support Table -->
   <div class="panel glass" style="padding: 25px;">
-    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">👥 STUDENTS NEEDING SUPPORT</h3>
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--text-primary);">👥 STUDENTS NEEDING SUPPORT</h3>
     
     <div class="panel-scroll" style="height: auto; min-height: 230px;">
       {% if support_list %}
@@ -119,20 +167,20 @@
             <tbody>
               {% for s in support_list %}
                 <tr onclick="window.location.href='/analytics?student_id={{ s.student_id }}';" style="cursor: pointer;">
-                  <td style="font-weight: 700; color: #FFFFFF;">{{ s.name }}</td>
+                  <td style="font-weight: 700; color: var(--text-primary);">{{ s.name }}</td>
                   <td>
                     {% if s.risk == 'HIGH' %}
-                      <span style="color: #FF0000; font-weight: 800;">🔴 HIGH</span>
+                      <span class="status-badge danger">🔴 HIGH</span>
                     {% elif s.risk == 'MEDIUM' %}
-                      <span style="color: #FF7A00; font-weight: 800;">🟠 MEDIUM</span>
+                      <span class="status-badge warning">🟠 MEDIUM</span>
                     {% else %}
-                      <span style="color: #34A853; font-weight: 800;">🟢 LOW</span>
+                      <span class="status-badge success">🟢 LOW</span>
                     {% endif %}
                   </td>
-                  <td style="font-weight: 700; color: #FFFFFF;">{{ "%.0f"|format(s.lhs) }}%</td>
+                  <td style="font-weight: 700; color: var(--text-primary);">{{ "%.0f"|format(s.lhs) }}%</td>
                   <td style="color: var(--color-text-muted);">{{ s.reason }}</td>
                   <td style="text-align: right;">
-                    <a href="/analytics?student_id={{ s.student_id }}" class="btn btn-primary" style="padding: 4px 8px; font-size: 10px; font-weight: 700;">Intervene</a>
+                    <a href="/analytics?student_id={{ s.student_id }}" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px; font-weight: 700;">Intervene</a>
                   </td>
                 </tr>
               {% endfor %}
@@ -153,14 +201,14 @@
 
   <!-- Quick Actions Sidebar Panel -->
   <div class="panel glass" style="padding: 25px;">
-    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">⚡ QUICK ACTIONS</h3>
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--text-primary);">⚡ QUICK ACTIONS</h3>
     
     <div style="display: flex; flex-direction: column; gap: 8px;">
       <a href="/students" class="btn btn-primary quick-action-btn">👤 Register New Student</a>
       <a href="/attendance" class="btn btn-primary quick-action-btn">✓ Mark Attendance Registry</a>
       <a href="/assessments" class="btn btn-primary quick-action-btn">📝 Add Academic Assessment</a>
       <a href="/wellness" class="btn btn-primary quick-action-btn">🛡 Lodge Cyber Wellness Audit</a>
-      <a href="/assistant" class="btn btn-primary quick-action-btn" style="background-color: var(--color-primary);">🤖 Ask AI Decision Assistant</a>
+      <a href="/assistant" class="btn btn-primary quick-action-btn" style="background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);">🤖 Ask AI Decision Assistant</a>
     </div>
   </div>
 </div>
@@ -169,31 +217,31 @@
 <div class="dashboard-split" style="margin-bottom: 20px;">
   <!-- Today's Attendance Widget -->
   <div class="panel glass" style="padding: 25px; min-height: 190px;">
-    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">📅 TODAY'S ATTENDANCE</h3>
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--text-primary);">📅 TODAY'S ATTENDANCE</h3>
     
     {% if today_attendance.marked %}
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <span style="font-size: 13px; font-weight: 700; color: #FFFFFF;">
+        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
           {{ today_attendance.present }} Present | {{ today_attendance.absent }} Absent (Class: XII-A)
         </span>
-        <span style="font-size: 13px; font-weight: 700; color: #34A853;">
+        <span style="font-size: 13px; font-weight: 700; color: var(--color-success);">
           Attendance Rate: {{ "%.1f"|format(today_attendance.rate) }}%
         </span>
         
-        <!-- HTML progress bar -->
-        <div style="width: 100%; background-color: #212121; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 5px;">
-          <div style="width: {{ today_attendance.rate }}%; background-color: #34A853; height: 100%;"></div>
+        <!-- Progress bar -->
+        <div class="progress-bar-wrap" style="height: 8px;">
+          <div class="progress-bar-fill green" style="width: {{ today_attendance.rate }}%;"></div>
         </div>
 
         <div style="margin-top: 10px;">
-          <a href="/attendance" class="btn btn-primary" style="padding: 8px 16px; font-size: 11px; font-weight: 700; background-color: var(--bg-hover); color: #fff; border: 1px solid var(--border);">UPDATE ATTENDANCE</a>
+          <a href="/attendance" class="btn btn-primary" style="padding: 8px 16px; font-size: 11px; font-weight: 700;">UPDATE ATTENDANCE</a>
         </div>
       </div>
     {% else %}
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <span style="font-size: 13px; font-weight: 700; color: var(--color-warning);">⚠ Attendance has not been marked today.</span>
         <div style="margin-top: 10px;">
-          <a href="/attendance" class="btn btn-primary" style="padding: 10px 18px; font-size: 12px; font-weight: 800; background-color: var(--color-primary); color: #FFFFFF;">MARK ATTENDANCE NOW</a>
+          <a href="/attendance" class="btn btn-primary" style="padding: 10px 18px; font-size: 12px; font-weight: 800;">MARK ATTENDANCE NOW</a>
         </div>
       </div>
     {% endif %}
@@ -201,28 +249,28 @@
 
   <!-- AI Daily Insight Card -->
   <div class="panel glass" style="padding: 25px; min-height: 190px; display: flex; flex-direction: column;">
-    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FF4D4D;">🤖 AI DAILY INSIGHT</h3>
-    <p style="font-size: 12px; color: #E5E5E5; line-height: 1.5; margin: 0 0 15px 0; flex-grow: 1;">
+    <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--color-primary);">🤖 AI DAILY INSIGHT</h3>
+    <p style="font-size: 12px; color: var(--text-primary); line-height: 1.55; margin: 0 0 15px 0; flex-grow: 1;">
       {{ ai_insight }}
     </p>
     
     <div style="display: flex; gap: 10px;">
-      <a href="/analytics" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700; background-color: var(--bg-hover); color: #FFFFFF; border: 1px solid var(--border);">ANALYZE CLASS</a>
-      <a href="/assistant" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700; background-color: var(--color-primary); color: #FFFFFF;">ASK AI ASSISTANT</a>
+      <a href="/analytics" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700; background-color: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border);">ANALYZE CLASS</a>
+      <a href="/assistant" class="btn btn-primary" style="padding: 8px 14px; font-size: 11px; font-weight: 700;">ASK AI ASSISTANT</a>
     </div>
   </div>
 </div>
 
 <!-- Bottom activity logs timeline -->
 <div class="panel glass" style="padding: 25px; margin-bottom: 20px;">
-  <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: #FFFFFF;">🕒 RECENT ACTIVITY TIMELINE</h3>
+  <h3 style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 15px; color: var(--text-primary);">🕒 RECENT ACTIVITY TIMELINE</h3>
   
   <div style="display: flex; flex-direction: column; gap: 10px;">
     {% for row in activity_rows %}
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 14px; color: var(--color-primary);">•</span>
-          <span style="color: #FFFFFF;">{{ row.activity }}</span>
+          <span style="color: var(--text-primary);">{{ row.activity }}</span>
         </div>
         <span style="color: var(--color-text-muted);">{{ row.activity_time }}</span>
       </div>
@@ -232,10 +280,11 @@
 
 <!-- Render performance trend Chart.js plot dynamically -->
 {% if trend_labels %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const ctx = document.getElementById('performanceTrendChart').getContext('2d');
+    const canvas = document.getElementById('performanceTrendChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     new Chart(ctx, {
       type: 'line',
       data: {
@@ -243,12 +292,12 @@
         datasets: [{
           label: 'Class Avg (%)',
           data: {{ trend_data|tojson }},
-          borderColor: '#E50914',
-          backgroundColor: 'rgba(229, 9, 20, 0.1)',
+          borderColor: '#E5484D',
+          backgroundColor: 'rgba(229, 72, 77, 0.1)',
           borderWidth: 2.5,
           tension: 0.3,
           fill: true,
-          pointBackgroundColor: '#E50914',
+          pointBackgroundColor: '#E5484D',
           pointRadius: 4
         }]
       },
@@ -263,10 +312,10 @@
         scales: {
           x: {
             grid: {
-              color: '#2A2A2A'
+              color: 'rgba(255,255,255,0.06)'
             },
             ticks: {
-              color: '#AAAAAA',
+              color: '#8D96A8',
               font: {
                 family: 'Outfit',
                 size: 9
@@ -277,10 +326,10 @@
             min: 0,
             max: 100,
             grid: {
-              color: '#2A2A2A'
+              color: 'rgba(255,255,255,0.06)'
             },
             ticks: {
-              color: '#AAAAAA',
+              color: '#8D96A8',
               font: {
                 family: 'Outfit',
                 size: 9
@@ -294,3 +343,4 @@
 </script>
 {% endif %}
 {% endblock %}
+

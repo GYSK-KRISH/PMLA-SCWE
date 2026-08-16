@@ -181,14 +181,27 @@ def get_student_analytics_summary(student_id: int) -> dict[str, Any] | None:
     else:
         wellness_status = "Satisfactory"
         
-    # 8. Risk Level
-    if health_score < 50.0 or attendance_percentage < 75.0 or (academic_average < 50.0 and pred["trend_direction"] == "Declining"):
-        risk_level = "HIGH"
-    elif health_score < 70.0 or attendance_percentage < 85.0 or wellness_score < 60.0 or pred["trend_direction"] == "Declining":
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
-        
+    # 8. Explainable Risk Engine Integration
+    from . import risk_engine, explainability
+    metrics_payload = {
+        "academic_average": academic_average,
+        "attendance_percentage": attendance_percentage,
+        "slope": pred.get("slope", 0.0),
+        "trend_direction": pred.get("trend_direction", "Stable"),
+        "progress_count": 2 if pred.get("current_score", 0) > 0 else 0,
+        "wellness_score": wellness_score,
+        "daily_screen_time": screen_time_hours,
+        "screen_time_hours": screen_time_hours,
+        "learning_health_score": health_score,
+        "has_data": True,
+        "data_completeness": 100
+    }
+    risk_res = risk_engine.calculate_risk_score_from_metrics(metrics_payload)
+    risk_score = risk_res["risk_score"]
+    risk_level = risk_res["risk_level"]
+    factors = explainability.extract_contributing_risk_factors(metrics_payload, risk_res["breakdown"])
+    why_text = explainability.generate_why_narrative(metrics_payload, factors, risk_level)
+    
     summary_dict = {
         "student_id": student_id,
         "first_name": student_info["first_name"],
@@ -204,7 +217,11 @@ def get_student_analytics_summary(student_id: int) -> dict[str, Any] | None:
         "predicted_score": pred["predicted_score"],
         "trend_direction": pred["trend_direction"],
         "health_score": health_score,
-        "risk_level": risk_level
+        "risk_level": risk_level,
+        "risk_score": risk_score,
+        "factors": factors,
+        "why_explanation": why_text,
+        "breakdown": risk_res["breakdown"]
     }
     
     from . import recommendation
@@ -221,3 +238,14 @@ def get_student_analytics_summary(student_id: int) -> dict[str, Any] | None:
     summary_dict["basic_status"] = academic_status
     
     return summary_dict
+
+
+def get_class_risk_overview(
+    class_name: str | None = None,
+    section: str | None = None,
+    risk_filter: str | None = None
+) -> dict[str, Any]:
+    """Exposes classroom-level aggregate risk overview from the risk engine."""
+    from . import risk_engine
+    return risk_engine.get_class_risk_overview(class_name, section, risk_filter)
+

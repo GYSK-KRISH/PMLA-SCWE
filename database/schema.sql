@@ -1,8 +1,38 @@
--- Schema for PMLA-SCWE
+-- Schema for PMLA-SCWE Version 2.0 (Multi-School Multi-Tenancy Architecture)
 CREATE DATABASE IF NOT EXISTS pmla_scwe;
 USE pmla_scwe;
 
--- Admin login
+-- Schema Migrations Tracking Table
+CREATE TABLE IF NOT EXISTS Schema_Migrations (
+    migration_id INT PRIMARY KEY AUTO_INCREMENT,
+    version VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    checksum VARCHAR(64),
+    status VARCHAR(20) DEFAULT 'SUCCESS'
+);
+
+-- Organizations Table (Multi-tenancy Root)
+CREATE TABLE IF NOT EXISTS Organizations (
+    organization_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    is_active INT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Schools Table (Tenant Unit)
+CREATE TABLE IF NOT EXISTS Schools (
+    school_id INT PRIMARY KEY AUTO_INCREMENT,
+    organization_id INT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    is_active INT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (organization_id) REFERENCES Organizations(organization_id) ON DELETE CASCADE
+);
+
+-- Admin login (Legacy compatibility)
 CREATE TABLE IF NOT EXISTS Admin_Login (
     admin_id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -13,6 +43,7 @@ CREATE TABLE IF NOT EXISTS Admin_Login (
 -- Students
 CREATE TABLE IF NOT EXISTS Students (
     student_id INT PRIMARY KEY AUTO_INCREMENT,
+    school_id INT,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     class_section VARCHAR(20) NOT NULL,
@@ -20,7 +51,8 @@ CREATE TABLE IF NOT EXISTS Students (
     gender ENUM('M','F','O') DEFAULT 'O',
     email VARCHAR(100),
     phone VARCHAR(20),
-    enrollment_date DATE
+    enrollment_date DATE,
+    FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE SET NULL
 );
 
 -- Learning objectives / topics
@@ -109,7 +141,7 @@ CREATE TABLE IF NOT EXISTS Reports_Metadata (
     FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE SET NULL
 );
 
--- Multi-user Access Accounts
+-- Multi-user Access Accounts & Tenant Context
 CREATE TABLE IF NOT EXISTS Users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -117,17 +149,54 @@ CREATE TABLE IF NOT EXISTS Users (
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) DEFAULT 'Teacher',
     status VARCHAR(20) DEFAULT 'Active',
+    is_active INT DEFAULT 1,
+    organization_id INT,
+    school_id INT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME,
+    FOREIGN KEY (organization_id) REFERENCES Organizations(organization_id) ON DELETE SET NULL,
+    FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE SET NULL
 );
 
--- System Notifications and Alerts
+-- System Notifications and Alerts Center (v1.6/v1.7)
 CREATE TABLE IF NOT EXISTS Notifications (
     notification_id INT PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(100) NOT NULL,
+    student_id INT,
+    alert_type VARCHAR(50) DEFAULT 'SYSTEM',
+    priority VARCHAR(20) DEFAULT 'INFO',
+    title VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
-    priority VARCHAR(20) DEFAULT 'SYSTEM',
     is_read INT DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    source VARCHAR(50) DEFAULT 'Analytics Engine',
+    dedup_key VARCHAR(150),
+    action_status VARCHAR(30) DEFAULT 'OPEN',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE SET NULL
 );
 
+-- Version 1.6: Teacher Interventions & Outcome Tracking
+CREATE TABLE IF NOT EXISTS Interventions (
+    intervention_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    risk_factor VARCHAR(100) NOT NULL,
+    action_type VARCHAR(50) DEFAULT 'Remedial Practice',
+    priority VARCHAR(20) DEFAULT 'MEDIUM',
+    status VARCHAR(20) DEFAULT 'PENDING',
+    assigned_date DATE NOT NULL,
+    target_date DATE,
+    completed_date DATE,
+    teacher_notes TEXT,
+    pre_academic_score FLOAT,
+    post_academic_score FLOAT,
+    pre_attendance_rate FLOAT,
+    post_attendance_rate FLOAT,
+    pre_risk_score FLOAT,
+    post_risk_score FLOAT,
+    pre_lhs_score FLOAT,
+    post_lhs_score FLOAT,
+    effectiveness_score FLOAT,
+    effectiveness_tier VARCHAR(50),
+    FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
+);

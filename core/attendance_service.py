@@ -27,7 +27,7 @@ def mark_attendance(attendance_data: dict[str, Any]) -> bool:
     )
     if existing:
         q = "UPDATE Attendance SET status = %s WHERE student_id = %s AND attendance_date = %s"
-        return execute_non_query(q, (status, student_id, attendance_date)) > 0
+        return execute_non_query(q, (status, student_id, attendance_date)) >= 0
     else:
         q = "INSERT INTO Attendance (student_id, attendance_date, status) VALUES (%s, %s, %s)"
         return execute_non_query(q, (student_id, attendance_date, status)) == 1
@@ -109,3 +109,12 @@ def save_attendance(attendance_date: str, class_section: str, attendance_records
                 (student_id, attendance_date, code)
             )
     return True
+
+
+def get_student_attendance(student_id: int) -> list[dict[str, Any]]:
+    """Retrieve full attendance history for a student."""
+    return execute_query(
+        "SELECT attendance_id, student_id, attendance_date, status "
+        "FROM Attendance WHERE student_id = %s ORDER BY attendance_date DESC",
+        (student_id,)
+    )

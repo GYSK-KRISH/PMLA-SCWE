@@ -1,127 +1,292 @@
-"""CustomTkinter panel for student predictive analytics, Learning Health Score breakdown, and actions."""
+"""PySide6 panel for Explainable Predictive Analytics & Learning Risk Engine.
+
+Version 1.3 — Explainable Predictive Analytics
+Features:
+- Class-wide risk overview cards (High, Medium, Low, Insufficient) & primary risk factor.
+- Class, section, and risk tier filters.
+- Student risk score (0-100) and transparent multi-factor contribution breakdown.
+- Evidence-based explainability ('Why does this student need attention?').
+- Deduplicated early warning indicators.
+- Deterministic teacher intervention checklist.
+- Transparent linear regression trajectory forecast.
+"""
 
 from __future__ import annotations
-import customtkinter as ctk
+import os
+from PySide6.QtWidgets import (
+    QWidget, QFrame, QLabel, QPushButton, QLineEdit, QVBoxLayout,
+    QHBoxLayout, QGridLayout, QScrollArea, QCheckBox, QComboBox, QSizePolicy
+)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont
 
-from core import student_service, analytics, recommendation
+from core import student_service, analytics, recommendation, risk_engine, explainability, constants
+from .student_profile_dialog import StudentProfileDialog
+from .widgets.animated_card import AnimatedCard
+from .widgets.reusable_ui_components import (
+    SectionHeader, StatusBadge, AnimatedProgressBar, InfoRow, EmptyState
+)
 
 
-class AnalyticsViewFrame(ctk.CTkFrame):
+class AnalyticsViewFrame(QWidget):
+    """Upgraded PySide6 frame for Version 1.3 Explainable Learning Risk Engine."""
+
     def __init__(self, parent, controller):
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(parent)
         self.controller = controller
-
-        # Grid configuration
-        self.grid_columnconfigure(0, weight=3)
-        self.grid_columnconfigure(1, weight=2)
-        self.grid_rowconfigure(2, weight=1)
-
-        # Header Section
-        header_frame = ctk.CTkFrame(self, fg_color="#0F0F0F", border_color="#2A2A2A", border_width=1, corner_radius=12, height=80)
-        header_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=20, pady=(20, 10))
-        header_frame.grid_columnconfigure(0, weight=1)
-
-        title = ctk.CTkLabel(
-            header_frame,
-            text="PREDICTIVE STUDENT ANALYTICS & INSIGHTS",
-            font=ctk.CTkFont(family="Outfit", size=24, weight="bold"),
-            text_color="#FFFFFF"
-        )
-        title.grid(row=0, column=0, sticky="w", padx=20, pady=10)
-
-        # Selection Control Panel
-        lookup_frame = ctk.CTkFrame(self, fg_color="#1A1A1A", border_color="#2A2A2A", border_width=1, corner_radius=12)
-        lookup_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=20, pady=10)
-
-        sid_lbl = ctk.CTkLabel(
-            lookup_frame,
-            text="Enter Student ID:",
-            font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            text_color="#AAAAAA"
-        )
-        sid_lbl.grid(row=0, column=0, padx=(20, 10), pady=15, sticky="w")
-
-        self.sid_entry = ctk.CTkEntry(
-            lookup_frame,
-            placeholder_text="e.g. 1",
-            width=120,
-            fg_color="#181818",
-            border_color="#303030",
-            focused_border_color="#FF0000",
-            placeholder_text_color="#717171",
-            text_color="#FFFFFF",
-            font=ctk.CTkFont(family="Outfit", size=13)
-        )
-        self.sid_entry.grid(row=0, column=1, padx=10, pady=15, sticky="w")
-        self.sid_entry.bind("<Return>", lambda e: self.load_student_analytics())
-
-        search_btn = ctk.CTkButton(
-            lookup_frame,
-            text="Run Analytics",
-            command=self.load_student_analytics,
-            fg_color="#272727",
-            hover_color="#333333",
-            text_color="#FFFFFF",
-            border_width=1,
-            border_color="#3A3A3A",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold")
-        )
-        search_btn.grid(row=0, column=2, padx=15, pady=15, sticky="w")
-
-        self.student_info_lbl = ctk.CTkLabel(
-            lookup_frame,
-            text="No student selected.",
-            font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            text_color="#AAAAAA"
-        )
-        self.student_info_lbl.grid(row=0, column=3, padx=20, pady=15, sticky="w")
-
-        # Left Column: LHS details, Academic, Attendance & Wellness Metrics
-        self.left_scroll = ctk.CTkScrollableFrame(self, fg_color="#1A1A1A", border_color="#2A2A2A", border_width=1, corner_radius=12)
-        self.left_scroll.grid(row=2, column=0, sticky="nsew", padx=(20, 10), pady=10)
-
-        # Right Column: Insights & Actions Checklist + Export Triggers
-        self.right_scroll = ctk.CTkScrollableFrame(self, fg_color="#1A1A1A", border_color="#2A2A2A", border_width=1, corner_radius=12)
-        self.right_scroll.grid(row=2, column=1, sticky="nsew", padx=(10, 20), pady=10)
-
-        # State Cache
         self.active_student_id = None
         self.student_summary = None
+        self.student_risk_profile = None
 
-        # Build initial instructions in scroll panels
+        # Main Layout
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(15, 12, 15, 12)
+        root_layout.setSpacing(12)
+
+        # -------------------------------------------------------------------
+        # 1. Header Section
+        # -------------------------------------------------------------------
+        header_frame = QFrame(self)
+        header_frame.setObjectName("CardFrame")
+        header_frame.setFixedHeight(54)
+        h_layout = QHBoxLayout(header_frame)
+        h_layout.setContentsMargins(16, 0, 16, 0)
+
+        title = QLabel("EXPLAINABLE LEARNING RISK ENGINE", header_frame)
+        title.setFont(QFont("Outfit", 17, QFont.Bold))
+        title.setStyleSheet("color: #FFFFFF; background: transparent; border: none;")
+        h_layout.addWidget(title)
+
+        subtitle = QLabel("Transparent • Evidence-Based • Educational Decision Support", header_frame)
+        subtitle.setFont(QFont("Outfit", 11))
+        subtitle.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        h_layout.addWidget(subtitle)
+        h_layout.addStretch(1)
+
+        root_layout.addWidget(header_frame)
+
+        # -------------------------------------------------------------------
+        # 2. Class Risk Overview KPI Bar
+        # -------------------------------------------------------------------
+        self.overview_frame = QFrame(self)
+        self.overview_frame.setObjectName("CardFrame")
+        ov_layout = QHBoxLayout(self.overview_frame)
+        ov_layout.setContentsMargins(12, 10, 12, 10)
+        ov_layout.setSpacing(12)
+
+        # High Risk Card
+        self.high_card = self._create_kpi_mini_card("HIGH RISK", "0", "danger", "🔴")
+        ov_layout.addWidget(self.high_card)
+
+        # Medium Risk Card
+        self.med_card = self._create_kpi_mini_card("MEDIUM RISK", "0", "warning", "🟡")
+        ov_layout.addWidget(self.med_card)
+
+        # Low Risk Card
+        self.low_card = self._create_kpi_mini_card("LOW RISK", "0", "success", "🟢")
+        ov_layout.addWidget(self.low_card)
+
+        # Insufficient Data Card
+        self.insuf_card = self._create_kpi_mini_card("INSUFFICIENT", "0", "muted", "⚪")
+        ov_layout.addWidget(self.insuf_card)
+
+        # Most Common Concern Pill
+        self.common_concern_box = QFrame(self.overview_frame)
+        self.common_concern_box.setObjectName("InnerCardFrame")
+        cc_layout = QVBoxLayout(self.common_concern_box)
+        cc_layout.setContentsMargins(12, 6, 12, 6)
+        cc_layout.setSpacing(2)
+
+        cc_title = QLabel("PRIMARY COHORT CONCERN", self.common_concern_box)
+        cc_title.setFont(QFont("Outfit", 9, QFont.Bold))
+        cc_title.setStyleSheet("color: #8D96A8; letter-spacing: 0.5px;")
+        cc_layout.addWidget(cc_title)
+
+        self.common_concern_lbl = QLabel("Loading...", self.common_concern_box)
+        self.common_concern_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+        self.common_concern_lbl.setStyleSheet("color: #7C5CFF;")
+        cc_layout.addWidget(self.common_concern_lbl)
+
+        ov_layout.addWidget(self.common_concern_box, 1)
+        root_layout.addWidget(self.overview_frame)
+
+        # -------------------------------------------------------------------
+        # 3. Filter & Selection Control Panel
+        # -------------------------------------------------------------------
+        lookup_frame = QFrame(self)
+        lookup_frame.setObjectName("CardFrame")
+        lf_layout = QHBoxLayout(lookup_frame)
+        lf_layout.setContentsMargins(16, 8, 16, 8)
+        lf_layout.setSpacing(10)
+
+        # Class Filter
+        lf_layout.addWidget(QLabel("Class:", lookup_frame))
+        self.class_filter = QComboBox(lookup_frame)
+        self.class_filter.addItems(["All", "XII", "XI", "X"])
+        self.class_filter.currentTextChanged.connect(self.on_filter_changed)
+        lf_layout.addWidget(self.class_filter)
+
+        # Section Filter
+        lf_layout.addWidget(QLabel("Section:", lookup_frame))
+        self.sec_filter = QComboBox(lookup_frame)
+        self.sec_filter.addItems(["All", "A", "B", "C"])
+        self.sec_filter.currentTextChanged.connect(self.on_filter_changed)
+        lf_layout.addWidget(self.sec_filter)
+
+        # Risk Filter
+        lf_layout.addWidget(QLabel("Risk Tier:", lookup_frame))
+        self.risk_filter = QComboBox(lookup_frame)
+        self.risk_filter.addItems(["All", "HIGH", "MEDIUM", "LOW", "INSUFFICIENT DATA"])
+        self.risk_filter.currentTextChanged.connect(self.on_filter_changed)
+        lf_layout.addWidget(self.risk_filter)
+
+        lf_layout.addSpacing(10)
+        lf_layout.addWidget(QLabel("Student ID:", lookup_frame))
+
+        self.sid_entry = QLineEdit(lookup_frame)
+        self.sid_entry.setPlaceholderText("e.g. 1")
+        self.sid_entry.setFixedWidth(80)
+        self.sid_entry.returnPressed.connect(self.load_student_analytics)
+        lf_layout.addWidget(self.sid_entry)
+
+        search_btn = QPushButton("Analyze", lookup_frame)
+        search_btn.setFont(QFont("Outfit", 11, QFont.Bold))
+        search_btn.setCursor(Qt.PointingHandCursor)
+        search_btn.clicked.connect(self.load_student_analytics)
+        lf_layout.addWidget(search_btn)
+
+        self.profile_btn = QPushButton("✦ Open 360° Profile", lookup_frame)
+        self.profile_btn.setFont(QFont("Outfit", 11, QFont.Bold))
+        self.profile_btn.setStyleSheet(
+            "QPushButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7C5CFF, stop:1 #4D8DFF);"
+            " color: #FFFFFF; border-radius: 6px; padding: 5px 12px; font-weight: bold; }"
+            "QPushButton:hover { opacity: 0.9; }"
+        )
+        self.profile_btn.setCursor(Qt.PointingHandCursor)
+        self.profile_btn.clicked.connect(self.open_360_profile_dialog)
+        self.profile_btn.setEnabled(False)
+        lf_layout.addWidget(self.profile_btn)
+
+        self.student_info_lbl = QLabel("No student selected.", lookup_frame)
+        self.student_info_lbl.setFont(QFont("Outfit", 12, QFont.Bold))
+        self.student_info_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        lf_layout.addWidget(self.student_info_lbl)
+
+        lf_layout.addStretch(1)
+        root_layout.addWidget(lookup_frame)
+
+        # -------------------------------------------------------------------
+        # 4. Split Layout for Student Explainability Details
+        # -------------------------------------------------------------------
+        split_widget = QWidget(self)
+        split_layout = QHBoxLayout(split_widget)
+        split_layout.setContentsMargins(0, 0, 0, 0)
+        split_layout.setSpacing(12)
+
+        # Left Column: Risk Score, Contributing Factors, Predictive Trajectory
+        self.left_scroll = QScrollArea(split_widget)
+        self.left_scroll.setObjectName("CardFrame")
+        self.left_scroll.setWidgetResizable(True)
+        self.left_content = QWidget()
+        self.left_layout = QVBoxLayout(self.left_content)
+        self.left_layout.setContentsMargins(12, 12, 12, 12)
+        self.left_layout.setSpacing(12)
+        self.left_layout.setAlignment(Qt.AlignTop)
+        self.left_scroll.setWidget(self.left_content)
+        split_layout.addWidget(self.left_scroll, 3)
+
+        # Right Column: "Why?" Narrative, Early Warnings, Recommended Actions
+        self.right_scroll = QScrollArea(split_widget)
+        self.right_scroll.setObjectName("CardFrame")
+        self.right_scroll.setWidgetResizable(True)
+        self.right_content = QWidget()
+        self.right_layout = QVBoxLayout(self.right_content)
+        self.right_layout.setContentsMargins(12, 12, 12, 12)
+        self.right_layout.setSpacing(12)
+        self.right_layout.setAlignment(Qt.AlignTop)
+        self.right_scroll.setWidget(self.right_content)
+        split_layout.addWidget(self.right_scroll, 3)
+
+        root_layout.addWidget(split_widget, 1)
+
+        # Initialize Data & Draw Placeholders
+        self.refresh_class_overview()
         self.draw_instruction_placeholders()
 
-    def draw_instruction_placeholders(self):
-        lbl1 = ctk.CTkLabel(
-            self.left_scroll,
-            text="Enter a Student ID above and click 'Run Analytics' to\nretrieve Learning Health Scores, Weekly Performance Regression\ntrends, and active risk metrics.",
-            font=ctk.CTkFont(family="Outfit", size=13),
-            text_color="#AAAAAA",
-            justify="center"
-        )
-        lbl1.pack(pady=100)
+    def _create_kpi_mini_card(self, title: str, count: str, variant: str, icon: str) -> QFrame:
+        card = QFrame(self.overview_frame)
+        card.setObjectName("InnerCardFrame")
+        card.setFixedWidth(130)
+        c_layout = QVBoxLayout(card)
+        c_layout.setContentsMargins(10, 6, 10, 6)
+        c_layout.setSpacing(2)
 
-        lbl2 = ctk.CTkLabel(
-            self.right_scroll,
-            text="AI-derived insights and personalized teacher action checklists\nwill display here.",
-            font=ctk.CTkFont(family="Outfit", size=13),
-            text_color="#AAAAAA",
-            justify="center"
+        t_lbl = QLabel(f"{icon} {title}", card)
+        t_lbl.setFont(QFont("Outfit", 9, QFont.Bold))
+        t_lbl.setStyleSheet("color: #8D96A8;")
+        c_layout.addWidget(t_lbl)
+
+        val_lbl = QLabel(count, card)
+        val_lbl.setObjectName(f"val_{title.replace(' ', '_')}")
+        val_lbl.setFont(QFont("Outfit", 16, QFont.Bold))
+        color = "#E5484D" if variant == "danger" else ("#FFB224" if variant == "warning" else ("#30A46C" if variant == "success" else "#8D96A8"))
+        val_lbl.setStyleSheet(f"color: {color};")
+        c_layout.addWidget(val_lbl)
+
+        return card
+
+    def refresh_class_overview(self):
+        """Loads aggregate class-wide risk distribution metrics."""
+        c_filter = self.class_filter.currentText()
+        s_filter = self.sec_filter.currentText()
+        r_filter = self.risk_filter.currentText()
+
+        overview = risk_engine.get_class_risk_overview(c_filter, s_filter, r_filter)
+        
+        # Update counts
+        for card, val in [
+            (self.high_card, overview["total_high"]),
+            (self.med_card, overview["total_medium"]),
+            (self.low_card, overview["total_low"]),
+            (self.insuf_card, overview["total_insufficient"])
+        ]:
+            val_lbl = card.findChild(QLabel, f"val_{card.findChildren(QLabel)[0].text().split(' ')[1]}")
+            if val_lbl:
+                val_lbl.setText(str(val))
+
+        self.common_concern_lbl.setText(overview["most_common_risk_factor"])
+
+    def on_filter_changed(self):
+        self.refresh_class_overview()
+
+    def draw_instruction_placeholders(self):
+        while self.left_layout.count() > 0:
+            item = self.left_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        while self.right_layout.count() > 0:
+            item = self.right_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        empty_left = EmptyState(
+            icon="🧠",
+            title="Explainable Learning Risk Engine",
+            description="Enter a Student ID above and click 'Analyze' to compute transparent multi-factor risk scores, contributing factor evidence, and trajectory forecasts.",
+            parent=self.left_content
         )
-        lbl2.pack(pady=100)
+        self.left_layout.addWidget(empty_left)
+
+        empty_right = EmptyState(
+            icon="💡",
+            title="Evidence & Intervention Plan",
+            description="Clear 'Why?' narratives and deterministic teacher action checksheets will populate here.",
+            parent=self.right_content
+        )
+        self.right_layout.addWidget(empty_right)
 
     def load_student_analytics(self):
-        # Clear containers
-        for w in self.left_scroll.winfo_children():
-            w.destroy()
-        for w in self.right_scroll.winfo_children():
-            w.destroy()
-
-        self.active_student_id = None
-        self.student_summary = None
-        self.student_info_lbl.configure(text="No student selected.", text_color="#95a5a6")
-
-        sid_raw = self.sid_entry.get().strip()
+        sid_raw = self.sid_entry.text().strip()
         if not sid_raw:
             self.draw_instruction_placeholders()
             return
@@ -132,209 +297,294 @@ class AnalyticsViewFrame(ctk.CTkFrame):
             self.draw_instruction_placeholders()
             return
 
-        # Fetch calculations
-        summary = analytics.get_student_analytics_summary(sid)
-        if not summary:
-            self.student_info_lbl.configure(text=f"Student ID {sid} not found in database.", text_color="#e74c3c")
+        # Fetch complete explainable risk profile
+        profile = risk_engine.compute_student_risk_profile(sid)
+        if not profile:
+            self.student_info_lbl.setText(f"Student ID #{sid} not found in database.")
+            self.student_info_lbl.setStyleSheet("color: #E5484D; background: transparent; border: none;")
+            self.profile_btn.setEnabled(False)
             self.draw_instruction_placeholders()
             return
 
         self.active_student_id = sid
-        self.student_summary = summary
-        self.student_info_lbl.configure(
-            text=f"Active: {summary['student_name']} ({summary['class_section']})",
-            text_color="#FFFFFF"
-        )
+        self.student_risk_profile = profile
+        self.profile_btn.setEnabled(True)
 
-        # BUILD LEFT PANEL: KPI METRICS
-        # LHS and Risk Cards side-by-side
-        top_cards = ctk.CTkFrame(self.left_scroll, fg_color="transparent")
-        top_cards.pack(fill="x", padx=10, pady=10)
-        top_cards.grid_columnconfigure(0, weight=1)
-        top_cards.grid_columnconfigure(1, weight=1)
+        s = profile["student"]
+        self.student_info_lbl.setText(f"Active: {s['name']} ({s['class_section']})")
+        self.student_info_lbl.setStyleSheet("color: #FFFFFF; background: transparent; border: none;")
 
-        # LHS Card
-        lhs_card = ctk.CTkFrame(top_cards, fg_color="#212121", border_color="#2A2A2A", border_width=1, corner_radius=10, height=80)
-        lhs_card.grid(row=0, column=0, padx=5, sticky="ew")
-        lhs_card.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(lhs_card, text="LEARNING HEALTH SCORE", font=ctk.CTkFont(family="Outfit", size=10, weight="bold"), text_color="#AAAAAA").grid(row=0, column=0, pady=(10, 2))
-        ctk.CTkLabel(lhs_card, text=f"{summary['learning_health_score']:.1f} / 100", font=ctk.CTkFont(family="Outfit", size=20, weight="bold"), text_color="#FFFFFF").grid(row=1, column=0, pady=(2, 10))
+        # Clear containers
+        while self.left_layout.count() > 0:
+            item = self.left_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        while self.right_layout.count() > 0:
+            item = self.right_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
-        # Risk Card
-        risk_color = "#FF0000" if summary["risk_level"] == "HIGH" else ("#FF7A00" if summary["risk_level"] == "MEDIUM" else "#34A853")
-        risk_card = ctk.CTkFrame(top_cards, fg_color="#212121", border_color="#2A2A2A", border_width=1, corner_radius=10, height=80)
-        risk_card.grid(row=0, column=1, padx=5, sticky="ew")
-        risk_card.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(risk_card, text="RISK CLASSIFICATION", font=ctk.CTkFont(family="Outfit", size=10, weight="bold"), text_color="#AAAAAA").grid(row=0, column=0, pady=(10, 2))
-        ctk.CTkLabel(risk_card, text=summary["risk_level"], font=ctk.CTkFont(family="Outfit", size=20, weight="bold"), text_color=risk_color).grid(row=1, column=0, pady=(2, 10))
+        # ===================================================================
+        # LEFT PANEL: RISK SCORE + CONTRIBUTING FACTORS + PREDICTION
+        # ===================================================================
 
-        # Academic Frame
-        acad_frame = ctk.CTkFrame(self.left_scroll, fg_color="#181818", border_color="#2A2A2A", border_width=1, corner_radius=10)
-        acad_frame.pack(fill="x", padx=10, pady=5, ipady=5)
-        ctk.CTkLabel(acad_frame, text="ACADEMIC METRICS", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#FFFFFF").pack(anchor="w", padx=15, pady=(5, 5))
+        # 1. Composite Risk Score Card
+        risk_score = profile["risk_score"]
+        risk_level = profile["risk_level"]
+        r_card = AnimatedCard(self.left_content)
+        rc_layout = QVBoxLayout(r_card)
+        rc_layout.setContentsMargins(16, 14, 16, 14)
+        rc_layout.setSpacing(10)
+
+        badge_variant = "danger" if risk_level == "HIGH" else ("warning" if risk_level == "MEDIUM" else ("success" if risk_level == "LOW" else "muted"))
+        rc_header = SectionHeader("TRANSPARENT RISK SCORE", subtitle="0 = Minimal Risk, 100 = Critical Multi-Factor Deficit", badge_text=f"{risk_level} RISK", badge_variant=badge_variant, parent=r_card)
+        rc_layout.addWidget(rc_header)
+
+        score_row = QWidget(r_card)
+        score_row.setStyleSheet("background: transparent;")
+        sr_layout = QHBoxLayout(score_row)
+        sr_layout.setContentsMargins(0, 0, 0, 0)
         
-        detail_txt1 = (
-            f"• Academic Quiz Average: {summary['academic_average']:.1f}% ({summary['academic_status']})\n"
-            f"• Weekly Progress Trend: {summary['trend']}\n"
-            f"• Regression Predicted Next Score: {summary['predicted_next_score']:.1f}%"
+        score_val_str = f"{risk_score}/100" if risk_score is not None else "N/A"
+        score_lbl = QLabel(score_val_str, score_row)
+        score_lbl.setFont(QFont("Outfit", 26, QFont.Bold))
+        score_lbl.setStyleSheet("color: #FFFFFF;")
+        sr_layout.addWidget(score_lbl)
+        sr_layout.addStretch(1)
+
+        level_pill = StatusBadge(f"Tier: {risk_level}", variant=badge_variant, parent=score_row)
+        sr_layout.addWidget(level_pill)
+        rc_layout.addWidget(score_row)
+
+        score_bar = AnimatedProgressBar(
+            value=float(risk_score) if risk_score is not None else 0.0,
+            variant="danger" if risk_level == "HIGH" else ("warning" if risk_level == "MEDIUM" else "success"),
+            bar_height=8,
+            animate=True,
+            parent=r_card
         )
-        ctk.CTkLabel(acad_frame, text=detail_txt1, font=ctk.CTkFont(family="Outfit", size=12), text_color="#FFFFFF", justify="left").pack(anchor="w", padx=15, pady=(0, 5))
+        rc_layout.addWidget(score_bar)
+        self.left_layout.addWidget(r_card)
 
-        # Attendance Frame
-        att_frame = ctk.CTkFrame(self.left_scroll, fg_color="#181818", border_color="#2A2A2A", border_width=1, corner_radius=10)
-        att_frame.pack(fill="x", padx=10, pady=5, ipady=5)
-        ctk.CTkLabel(att_frame, text="ATTENDANCE METRICS", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#FFFFFF").pack(anchor="w", padx=15, pady=(5, 5))
-        
-        detail_txt2 = (
-            f"• Overall Attendance Rate: {summary['attendance_percentage']:.1f}% ({summary['attendance_status']})"
-        )
-        ctk.CTkLabel(att_frame, text=detail_txt2, font=ctk.CTkFont(family="Outfit", size=12), text_color="#FFFFFF", justify="left").pack(anchor="w", padx=15, pady=(0, 5))
+        # 2. Contributing Risk Factors Table / Breakdown Card
+        factors_card = AnimatedCard(self.left_content)
+        fc_layout = QVBoxLayout(factors_card)
+        fc_layout.setContentsMargins(16, 14, 16, 14)
+        fc_layout.setSpacing(10)
 
-        # Cyber Wellness Frame
-        well_frame = ctk.CTkFrame(self.left_scroll, fg_color="#181818", border_color="#2A2A2A", border_width=1, corner_radius=10)
-        well_frame.pack(fill="x", padx=10, pady=5, ipady=5)
-        ctk.CTkLabel(well_frame, text="CYBER WELLNESS METRICS", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#FFFFFF").pack(anchor="w", padx=15, pady=(5, 5))
-        
-        detail_txt3 = (
-            f"• Cyber Wellness Index: {summary['cyber_wellness_score']:.1f}% ({summary['wellness_status']})\n"
-            f"• Daily Screen Exposure: {summary['screen_time_hours']:.1f} hours/day"
-        )
-        ctk.CTkLabel(well_frame, text=detail_txt3, font=ctk.CTkFont(family="Outfit", size=12), text_color="#FFFFFF", justify="left").pack(anchor="w", padx=15, pady=(0, 5))
+        fc_header = SectionHeader("CONTRIBUTING RISK FACTORS", subtitle="Evidence-based points contribution breakdown", parent=factors_card)
+        fc_layout.addWidget(fc_header)
 
-        # BUILD RIGHT PANEL: INSIGHTS & ACTIONS
-        # Explainable Insights list
-        ctk.CTkLabel(
-            self.right_scroll,
-            text="EXPLAINABLE INSIGHTS",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold"),
-            text_color="#FFFFFF"
-        ).pack(anchor="w", padx=10, pady=(10, 5))
+        factors = profile.get("factors", [])
+        if factors:
+            for f in factors:
+                f_frame = QFrame(factors_card)
+                f_frame.setObjectName("InnerCardFrame")
+                f_frame.setStyleSheet("background-color: #10131D; border-radius: 8px; padding: 6px;")
+                ff_layout = QHBoxLayout(f_frame)
+                ff_layout.setContentsMargins(10, 8, 10, 8)
+                ff_layout.setSpacing(10)
 
-        insights = recommendation.explain_learning_insights(summary)
-        for ins in insights:
-            lbl_ins = ctk.CTkLabel(
-                self.right_scroll,
-                text=f"• {ins}",
-                font=ctk.CTkFont(family="Outfit", size=12),
-                text_color="#FFFFFF",
-                justify="left",
-                wraplength=340
-            )
-            lbl_ins.pack(anchor="w", padx=15, pady=2)
+                pts_str = f"+{f['points_contributed']:.0f} pts"
+                pts_badge = StatusBadge(pts_str, variant="danger" if f["impact"] == "high" else ("warning" if f["impact"] == "medium" else "blue"), parent=f_frame)
+                ff_layout.addWidget(pts_badge)
 
-        # Personalized Action Items
-        ctk.CTkLabel(
-            self.right_scroll,
-            text="TEACHER INTERVENTION CHECKLIST",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold"),
-            text_color="#FFFFFF"
-        ).pack(anchor="w", padx=10, pady=(15, 5))
+                f_info = QWidget(f_frame)
+                f_info.setStyleSheet("background: transparent;")
+                fi_l = QVBoxLayout(f_info)
+                fi_l.setContentsMargins(0, 0, 0, 0)
+                fi_l.setSpacing(2)
 
-        plan = recommendation.generate_intervention_plan(summary)
-        for p in plan:
-            # CustomTkinter CTkCheckBox is beautiful here!
-            cb = ctk.CTkCheckBox(
-                self.right_scroll,
-                text=p,
-                font=ctk.CTkFont(family="Outfit", size=12),
-                text_color="#FFFFFF",
-                border_color="#303030",
-                checkmark_color="#FFFFFF",
-                fg_color="#E50914"
-            )
-            cb.pack(anchor="w", padx=15, pady=4)
+                fname_lbl = QLabel(f["name"], f_info)
+                fname_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+                fname_lbl.setStyleSheet("color: #F5F7FA;")
+                fi_l.addWidget(fname_lbl)
 
-        # Report Export Utilities Frame
-        export_frame = ctk.CTkFrame(self.right_scroll, fg_color="#181818", border_color="#2A2A2A", border_width=1, corner_radius=10)
-        export_frame.pack(fill="x", padx=10, pady=(20, 10), ipady=5)
-        
-        ctk.CTkLabel(
-            export_frame,
-            text="REPORT EXPORT & VISUAL CHARTS",
-            font=ctk.CTkFont(family="Outfit", size=11, weight="bold"),
-            text_color="#AAAAAA"
-        ).pack(anchor="w", padx=15, pady=(8, 5))
+                fev_lbl = QLabel(f["evidence"], f_info)
+                fev_lbl.setFont(QFont("Outfit", 10))
+                fev_lbl.setStyleSheet("color: #8D96A8;")
+                fev_lbl.setWordWrap(True)
+                fi_l.addWidget(fev_lbl)
 
-        self.btn_chart = ctk.CTkButton(
-            export_frame,
-            text="Generate Visual Matplotlib Charts",
-            command=self.trigger_chart_generation,
-            fg_color="#272727",
-            hover_color="#333333",
-            text_color="#FFFFFF",
-            border_width=1,
-            border_color="#3A3A3A",
-            font=ctk.CTkFont(family="Outfit", size=12)
-        )
-        self.btn_chart.pack(fill="x", padx=15, pady=4)
+                ff_layout.addWidget(f_info, 1)
+                fc_layout.addWidget(f_frame)
+        else:
+            fc_layout.addWidget(QLabel("No active negative risk factors detected.", factors_card))
 
-        self.btn_export = ctk.CTkButton(
-            export_frame,
-            text="Export Report (CSV & Text)",
-            command=self.trigger_report_export,
-            fg_color="#E50914",
-            hover_color="#CC0000",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family="Outfit", size=12)
-        )
-        self.btn_export.pack(fill="x", padx=15, pady=4)
+        self.left_layout.addWidget(factors_card)
 
-        self.feedback_lbl = ctk.CTkLabel(
-            export_frame,
-            text="",
-            font=ctk.CTkFont(family="Outfit", size=11),
-            text_color="#2ecc71"
-        )
-        self.feedback_lbl.pack(pady=(2, 5))
+        # 3. Data-Driven Trajectory & Prediction Card
+        pred_card = AnimatedCard(self.left_content)
+        pc_layout = QVBoxLayout(pred_card)
+        pc_layout.setContentsMargins(16, 14, 16, 14)
+        pc_layout.setSpacing(10)
 
-    def trigger_chart_generation(self):
+        pred_header = SectionHeader("PREDICTIVE TRAJECTORY INDICATOR", subtitle="Data-driven linear regression analysis", parent=pred_card)
+        pc_layout.addWidget(pred_header)
+
+        pred_info = profile.get("prediction", {})
+        if pred_info.get("status") == "VALID":
+            curr_s = pred_info.get("current_score")
+            pred_s = pred_info.get("predicted_score")
+            slope = profile.get("slope", 0.0)
+            trend = profile.get("trend", "Stable")
+
+            pc_layout.addWidget(InfoRow("Recent Progress Score:", f"{curr_s:.1f}%" if curr_s is not None else "N/A", parent=pred_card))
+            pc_layout.addWidget(InfoRow("Forecasted Next Score:", f"{pred_s:.1f}%" if pred_s is not None else "N/A", parent=pred_card))
+            pc_layout.addWidget(InfoRow("Performance Trajectory:", trend, parent=pred_card))
+            pc_layout.addWidget(InfoRow("Regression Slope:", f"{slope:.3f} pts/week", parent=pred_card))
+
+            disclaimer = QLabel("Notice: Statistical predictive indicator derived from historical scores. Not a guaranteed forecast.", pred_card)
+            disclaimer.setFont(QFont("Outfit", 9))
+            disclaimer.setStyleSheet("color: #8D96A8; font-style: italic; margin-top: 4px;")
+            disclaimer.setWordWrap(True)
+            pc_layout.addWidget(disclaimer)
+        else:
+            pc_layout.addWidget(EmptyState(icon="📈", title="Insufficient Progression Data", description="Requires at least 2 weekly progress observations to model trajectory.", parent=pred_card))
+
+        self.left_layout.addWidget(pred_card)
+
+        # ===================================================================
+        # RIGHT PANEL: "WHY?" NARRATIVE + ALERTS + ACTIONS
+        # ===================================================================
+
+        # 1. "Why Does This Student Require Attention?" Card
+        why_card = AnimatedCard(self.right_content)
+        wc_layout = QVBoxLayout(why_card)
+        wc_layout.setContentsMargins(16, 14, 16, 14)
+        wc_layout.setSpacing(10)
+
+        wc_header = SectionHeader("EXPLAINABLE INTELLIGENCE", subtitle="Why does this student require attention?", parent=why_card)
+        wc_layout.addWidget(wc_header)
+
+        why_bullets = profile.get("why_explanation", [])
+        if why_bullets:
+            for b_text in why_bullets:
+                row = QWidget(why_card)
+                row.setStyleSheet("background: transparent;")
+                rl = QHBoxLayout(row)
+                rl.setContentsMargins(0, 2, 0, 2)
+                rl.setSpacing(8)
+
+                bullet = QLabel("•", row)
+                bullet.setFont(QFont("Outfit", 13, QFont.Bold))
+                bullet.setStyleSheet("color: #7C5CFF;")
+                rl.addWidget(bullet)
+
+                txt = QLabel(b_text, row)
+                txt.setFont(QFont("Outfit", 11))
+                txt.setStyleSheet("color: #F5F7FA; line-height: 1.4;")
+                txt.setWordWrap(True)
+                rl.addWidget(txt, 1)
+
+                wc_layout.addWidget(row)
+        else:
+            wc_layout.addWidget(QLabel("No critical concerns flagged for this profile.", why_card))
+
+        self.right_layout.addWidget(why_card)
+
+        # 2. Early Warnings Card
+        warnings = profile.get("early_warnings", [])
+        if warnings:
+            warn_card = AnimatedCard(self.right_content)
+            wrc_layout = QVBoxLayout(warn_card)
+            wrc_layout.setContentsMargins(16, 14, 16, 14)
+            wrc_layout.setSpacing(10)
+
+            wrc_header = SectionHeader("EARLY WARNING SYSTEM", subtitle="Proactive threshold violation alerts", parent=warn_card)
+            wrc_layout.addWidget(wrc_header)
+
+            for w in warnings:
+                w_frame = QFrame(warn_card)
+                w_frame.setObjectName("InnerCardFrame")
+                w_frame.setStyleSheet("background-color: rgba(229, 72, 77, 0.08); border: 1px solid rgba(229, 72, 77, 0.3); border-radius: 8px; padding: 6px;")
+                wf_layout = QHBoxLayout(w_frame)
+                wf_layout.setContentsMargins(10, 6, 10, 6)
+                wf_layout.setSpacing(8)
+
+                icon_lbl = QLabel("⚠️" if w["severity"] == "CRITICAL" else "🔔", w_frame)
+                icon_lbl.setFont(QFont("Segoe UI Emoji", 12))
+                wf_layout.addWidget(icon_lbl)
+
+                w_text_box = QWidget(w_frame)
+                w_text_box.setStyleSheet("background: transparent;")
+                wt_l = QVBoxLayout(w_text_box)
+                wt_l.setContentsMargins(0, 0, 0, 0)
+                wt_l.setSpacing(2)
+
+                wt_lbl = QLabel(w["title"], w_text_box)
+                wt_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+                wt_lbl.setStyleSheet("color: #FF7B7B;")
+                wt_l.addWidget(wt_lbl)
+
+                wm_lbl = QLabel(w["message"], w_text_box)
+                wm_lbl.setFont(QFont("Outfit", 10))
+                wm_lbl.setStyleSheet("color: #8D96A8;")
+                wm_lbl.setWordWrap(True)
+                wt_l.addWidget(wm_lbl)
+
+                wf_layout.addWidget(w_text_box, 1)
+                wrc_layout.addWidget(w_frame)
+
+            self.right_layout.addWidget(warn_card)
+
+        # 3. Deterministic Intervention Action Plan
+        act_card = AnimatedCard(self.right_content)
+        ac_layout = QVBoxLayout(act_card)
+        ac_layout.setContentsMargins(16, 14, 16, 14)
+        ac_layout.setSpacing(10)
+
+        ac_header = SectionHeader("RECOMMENDED INTERVENTION ACTION PLAN", subtitle="Targeted pedagogical checklist", parent=act_card)
+        ac_layout.addWidget(ac_header)
+
+        actions = profile.get("recommended_actions", [])
+        if actions:
+            for act in actions:
+                a_frame = QFrame(act_card)
+                a_frame.setObjectName("InnerCardFrame")
+                a_frame.setStyleSheet("background-color: #10131D; border-radius: 8px; padding: 6px;")
+                af_layout = QHBoxLayout(a_frame)
+                af_layout.setContentsMargins(10, 8, 10, 8)
+                af_layout.setSpacing(10)
+
+                cb = QCheckBox(a_frame)
+                cb.setCursor(Qt.PointingHandCursor)
+                af_layout.addWidget(cb)
+
+                a_box = QWidget(a_frame)
+                a_box.setStyleSheet("background: transparent;")
+                ab_l = QVBoxLayout(a_box)
+                ab_l.setContentsMargins(0, 0, 0, 0)
+                ab_l.setSpacing(2)
+
+                at_lbl = QLabel(act["title"], a_box)
+                at_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+                at_lbl.setStyleSheet("color: #F5F7FA;")
+                ab_l.addWidget(at_lbl)
+
+                ad_lbl = QLabel(act["description"], a_box)
+                ad_lbl.setFont(QFont("Outfit", 10))
+                ad_lbl.setStyleSheet("color: #8D96A8;")
+                ad_lbl.setWordWrap(True)
+                ab_l.addWidget(ad_lbl)
+
+                af_layout.addWidget(a_box, 1)
+
+                prio_badge = StatusBadge(
+                    f"{act['priority']}",
+                    variant="danger" if act["priority"] == "HIGH" else ("warning" if act["priority"] == "MEDIUM" else "success"),
+                    parent=a_frame
+                )
+                af_layout.addWidget(prio_badge)
+                ac_layout.addWidget(a_frame)
+        else:
+            ac_layout.addWidget(QLabel("No immediate teacher interventions required.", act_card))
+
+        self.right_layout.addWidget(act_card)
+
+    def open_360_profile_dialog(self):
+        """Opens the complete Student 360° Profile dialog for the active student."""
         if not self.active_student_id:
             return
-        
-        self.btn_chart.configure(state="disabled", text="Generating...")
-        self.update()
-
-        try:
-            # Matplotlib is imported dynamically to decouple core logic and avoid delays
-            from core import graphs
-            
-            p1 = graphs.plot_student_progress(self.active_student_id)
-            p2 = graphs.plot_attendance(self.active_student_id)
-            p3 = graphs.plot_cyber_wellness(self.active_student_id)
-            p4 = graphs.plot_learning_health(self.active_student_id)
-
-            self.show_feedback(f"Charts saved in root 'reports/'.")
-        except Exception as e:
-            self.show_feedback(f"Chart error: {e}", is_error=True)
-        finally:
-            self.btn_chart.configure(state="normal", text="Generate Visual Matplotlib Charts")
-
-    def trigger_report_export(self):
-        if not self.active_student_id or not self.student_summary:
-            return
-
-        self.btn_export.configure(state="disabled", text="Exporting...")
-        self.update()
-
-        try:
-            from core import reports
-            
-            csv_path = reports.export_student_report_csv(self.active_student_id)
-            
-            txt_path = f"reports/student_{self.active_student_id}_report.txt"
-            text_content = reports.build_student_report(self.student_summary)
-            import os
-            os.makedirs("reports", exist_ok=True)
-            with open(txt_path, "w", encoding="utf-8") as tf:
-                tf.write(text_content)
-
-            self.show_feedback("Report CSV & Text saved under 'reports/'.")
-        except Exception as e:
-            self.show_feedback(f"Export error: {e}", is_error=True)
-        finally:
-            self.btn_export.configure(state="normal", text="Export Report (CSV & Text)")
-
-    def show_feedback(self, text: str, is_error: bool = False):
-        color = "#FF0000" if is_error else "#34A853"
-        self.feedback_lbl.configure(text=text, text_color=color)
-        self.after(4000, lambda: self.feedback_lbl.configure(text=""))
+        dialog = StudentProfileDialog(self, self.active_student_id)
+        dialog.exec()

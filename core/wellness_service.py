@@ -185,3 +185,10 @@ def get_latest_audit(student_id: int) -> dict[str, Any] | None:
     """Retrieve only the most recent wellness audit record for a student."""
     rows = get_student_audits(student_id)
     return rows[0] if rows else None
+
+
+def get_student_wellness_score(student_id: int) -> float | None:
+    """Retrieve the most recent calculated wellness score for a student."""
+    audit = get_latest_audit(student_id)
+    return float(audit["wellness_score"]) if audit and audit.get("wellness_score") is not None else None
+

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import Any
+from . import constants
 
 
 def explain_learning_insights(student_summary: dict[str, Any]) -> list[str]:
@@ -15,14 +16,14 @@ def explain_learning_insights(student_summary: dict[str, Any]) -> list[str]:
     if acad_status == "Excellent":
         insights.append("Academic performance is excellent, demonstrating mastery of the material.")
     elif acad_status == "Satisfactory":
-        if trend == "Improving":
+        if trend == constants.TRAJECTORY_IMPROVING:
             insights.append("Academic performance is satisfactory and showing a positive upward trend.")
-        elif trend == "Declining":
+        elif trend == constants.TRAJECTORY_DECLINING:
             insights.append("Academic performance is satisfactory, but recent weekly scores indicate a decline.")
         else:
             insights.append("Academic performance is satisfactory and stable.")
     else:
-        if trend == "Declining":
+        if trend == constants.TRAJECTORY_DECLINING:
             insights.append("Academic performance needs improvement, and recent weekly scores show a decline.")
         else:
             insights.append("Academic performance is below target. Regular revision is recommended.")
@@ -62,17 +63,17 @@ def generate_teacher_alerts(student_summary: dict[str, Any]) -> list[str]:
     screen_time = student_summary.get("screen_time_hours", 0.0)
     wellness = student_summary.get("wellness_score", 100.0)
     
-    if acad_avg < 60.0:
+    if acad_avg < constants.ACADEMIC_SATISFACTORY:
         alerts.append("Low academic performance")
-    if att_pct < 75.0:
+    if att_pct < constants.ATTENDANCE_MINIMUM_CBSE:
         alerts.append("Critical attendance")
-    elif att_pct < 85.0:
+    elif att_pct < constants.ATTENDANCE_SATISFACTORY:
         alerts.append("Attendance below threshold")
-    if trend == "Declining":
+    if trend == constants.TRAJECTORY_DECLINING:
         alerts.append("Declining weekly trend")
-    if screen_time > 6.0:
+    if screen_time > constants.MAX_HEALTHY_DAILY_SCREEN_HOURS:
         alerts.append("Excessive screen exposure")
-    if wellness < 55.0:
+    if wellness < constants.WELLNESS_CONCERN_THRESHOLD:
         alerts.append("Wellness concern")
         
     return alerts
@@ -89,16 +90,16 @@ def generate_intervention_plan(student_summary: dict[str, Any]) -> list[str]:
     wellness = student_summary.get("wellness_score", 100.0)
     risk = student_summary.get("risk_level", "LOW")
     
-    if acad_avg < 60.0:
+    if acad_avg < constants.ACADEMIC_SATISFACTORY:
         plan.append("Schedule remedial practice sessions.")
-    if trend == "Declining":
+    if trend == constants.TRAJECTORY_DECLINING:
         plan.append("Initiate weekly progress monitoring.")
-    if att_pct < 85.0:
+    if att_pct < constants.ATTENDANCE_SATISFACTORY:
         plan.append("Conduct teacher/parent follow-up regarding attendance.")
-    if screen_time > 6.0 or wellness < 55.0:
+    if screen_time > constants.MAX_HEALTHY_DAILY_SCREEN_HOURS or wellness < constants.WELLNESS_CONCERN_THRESHOLD:
         plan.append("Provide digital-wellness guidance to reduce screen exposure.")
-    if risk == "HIGH":
-        plan.append("Draft and implement a comprehensive individual intervention plan.")
+    if risk == constants.RISK_LEVEL_HIGH:
+        plan.append("Convene comprehensive student case review meeting.")
         
     if not plan:
         plan.append("Continue regular weekly revision and self-monitoring.")

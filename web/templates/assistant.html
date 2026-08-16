@@ -1,50 +1,113 @@
 {% extends 'base.html' %}
 
-{% block title %}PMLA-SCWE AI Assistant{% endblock %}
-{% block header_title %}AI Decision Assistant{% endblock %}
+{% block title %}PMLA-SCWE AI Teacher Copilot{% endblock %}
+{% block header_title %}AI TEACHER COPILOT & DECISION SUPPORT{% endblock %}
 
 {% block content %}
 <div class="assistant-layout">
-  <!-- Left Side Chat & Controls -->
+  <!-- Left Side Chat & Copilot Actions Workspace -->
   <div class="assistant-chat-panel glass">
-    <!-- Header banner matching mockup -->
-    <div class="assistant-chat-header">
-      <div class="ai-avatar-square">AI</div>
-      <div class="ai-header-text">
-        <h3>AI DECISION-SUPPORT ASSISTANT</h3>
-        <p>Your intelligent teaching companion</p>
+    <!-- Header banner -->
+    <div class="assistant-chat-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="ai-avatar-square" style="background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);">AI</div>
+        <div class="ai-header-text">
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-primary);">AI TEACHER COPILOT</h3>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">Grounded • Advisory • Decision-Support System</p>
+        </div>
+      </div>
+
+      <div>
+        {% if ai_status.status == 'Online' %}
+          <span class="status-badge success">● {{ ai_status.active_provider }} ({{ ai_status.active_model }})</span>
+        {% else %}
+          <span class="status-badge muted">○ Deterministic Offline Engine</span>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Parameter selectors -->
-    <div class="assistant-config-bar">
-      <div class="config-item">
-        <label for="studentIdInput">Analyze Student ID:</label>
-        <input type="text" id="studentIdInput" placeholder="ID (optional)">
+    <!-- Parameter Config Bar -->
+    <div class="assistant-config-bar" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 15px; background: var(--bg-secondary); border-radius: 8px; margin: 10px 0; border: 1px solid var(--border);">
+      <div class="config-item" style="display: flex; align-items: center; gap: 6px;">
+        <label for="studentIdInput" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Target Student:</label>
+        <select id="studentIdInput" class="form-control" style="width: 140px; padding: 4px 8px; font-size: 11px;">
+          <option value="">Select Student...</option>
+          {% for s in students %}
+            <option value="{{ s.student_id }}">#{{ s.student_id }} — {{ s.first_name }} {{ s.last_name }} ({{ s.class_section }})</option>
+          {% endfor %}
+        </select>
       </div>
-      <button class="btn btn-primary" id="genSuggestionsBtn">Generate AI Suggestions</button>
-      <div class="config-checkbox">
-        <input type="checkbox" id="speakResponseCheck" checked>
-        <label for="speakResponseCheck">Speak AI Responses</label>
+
+      <div class="config-item" style="display: flex; align-items: center; gap: 6px;">
+        <label for="durationSelect" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Plan Duration:</label>
+        <select id="durationSelect" class="form-control" style="width: 90px; padding: 4px 8px; font-size: 11px;">
+          <option value="7">7 Days</option>
+          <option value="14">14 Days</option>
+          <option value="30">30 Days</option>
+        </select>
+      </div>
+
+      <div class="config-item" style="display: flex; align-items: center; gap: 6px;">
+        <label for="compareIdInput" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Compare With:</label>
+        <select id="compareIdInput" class="form-control" style="width: 140px; padding: 4px 8px; font-size: 11px;">
+          <option value="">Compare Student...</option>
+          {% for s in students %}
+            <option value="{{ s.student_id }}">#{{ s.student_id }} — {{ s.first_name }} {{ s.last_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="config-checkbox" style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="speakResponseCheck">
+        <label for="speakResponseCheck" style="font-size: 11px; color: var(--text-secondary); cursor: pointer;">Speak Audio</label>
+      </div>
+    </div>
+
+    <!-- 8 Predefined Copilot Quick Actions Grid -->
+    <div style="margin-bottom: 12px;">
+      <div style="font-size: 11px; font-weight: 800; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.5px;">
+        ⚡ COPILOT PEDAGOGICAL WORKFLOWS
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px;">
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('explain_risk')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          🔍 Explain Risk
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('study_plan')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          📚 Study Plan
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('identify_weak_topics')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          🎯 Weak Topics
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('generate_intervention')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          🛠️ Intervention
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('class_summary')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          📊 Class Summary
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('compare_students')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          ⚖️ Compare
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('parent_summary')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          ✉️ Parent Letter
+        </button>
+        <button class="btn copilot-action-btn" onclick="executeCopilotAction('suggest_actions')" style="padding: 6px 10px; font-size: 11px; text-align: left; background: var(--bg-card); border: 1px solid var(--border);">
+          💡 Teacher Actions
+        </button>
       </div>
     </div>
 
     <!-- Conversation Display Logs -->
-    <div class="chat-display-wrapper" id="chatDisplayWrapper">
+    <div class="chat-display-wrapper" id="chatDisplayWrapper" style="min-height: 380px; max-height: 480px; overflow-y: auto;">
       <div class="chat-message-row assistant">
-        <div class="msg-avatar">AI</div>
+        <div class="msg-avatar" style="background: linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%);">AI</div>
         <div class="msg-content-wrapper">
-          <span class="sender-name">AI Assistant</span>
+          <span class="sender-name">AI Teacher Copilot</span>
           <div class="msg-bubble">
-            <p>Welcome! I am the PMLA-SCWE explainable decision-support assistant.</p>
-            <p>You can ask questions like:</p>
-            <ul>
-              <li>"How is student 1 performing?"</li>
-              <li>"Which students need immediate attention?"</li>
-              <li>"Show attendance summary for class XII-A"</li>
-              <li>"Recommend interventions for high risk students"</li>
-            </ul>
-            <p>How can I help you today?</p>
+            <p>Welcome! I am the **PMLA-SCWE AI Teacher Copilot** — an intelligent educational decision-support assistant.</p>
+            <p>Select a student and trigger any of the 8 pedagogical workflows above, or ask free-form inquiries below.</p>
+            <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; font-style: italic;">
+              🛡️ All recommendations are grounded in verified learning data and require educator review.
+            </p>
           </div>
           <span class="msg-time" id="greetingTime">10:30 AM</span>
         </div>
@@ -52,73 +115,64 @@
     </div>
 
     <!-- Input control console area -->
-    <div class="chat-input-console">
+    <div class="chat-input-console" style="margin-top: 10px;">
       <div class="chat-input-bar">
-        <button class="chat-mic-btn" id="chatInputMicBtn" title="Speak to Assistant">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        <button class="chat-mic-btn" id="chatInputMicBtn" title="Speak to Copilot">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
         </button>
-        <input type="text" id="chatTextInput" placeholder="Type your question about student performance or cyber wellness...">
-        <button class="chat-send-btn" id="chatSendBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <input type="text" id="chatTextInput" placeholder="Ask a pedagogical question or inquiry...">
+        <button class="chat-send-btn" id="chatSendBtn" style="padding: 0 16px;">
           Send
         </button>
-      </div>
-      
-      <!-- Suggestion chips below input -->
-      <div class="suggestion-chips-container">
-        <button class="chip-btn">High Risk Students</button>
-        <button class="chip-btn">Class Performance</button>
-        <button class="chip-btn">Attendance Summary</button>
-        <button class="chip-btn">Wellness Alerts</button>
       </div>
     </div>
   </div>
 
-  <!-- Right Side Summary Panels -->
+  <!-- Right Side Summary & Safety Panel -->
   <div class="assistant-summary-panel">
     <!-- 1. Mini KPI widgets grid -->
     <div class="mini-kpi-grid">
       <div class="mini-kpi-card glass">
         <div class="card-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2.5 3 6 3s6-1 6-3v-5"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2.5 3 6 3s6-1 6-3v-5"/></svg>
         </div>
         <div class="card-info">
           <span class="val">{{ stats.total_students }}</span>
-          <span class="lbl">Total Students</span>
+          <span class="lbl">Cohort Size</span>
         </div>
       </div>
       <div class="mini-kpi-card glass">
         <div class="card-icon" style="color: #ff7a00;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         </div>
         <div class="card-info">
           <span class="val">{{ "%.0f"|format(stats.avg_academic) }}%</span>
-          <span class="lbl">Avg. Performance</span>
+          <span class="lbl">Avg Score</span>
         </div>
       </div>
       <div class="mini-kpi-card glass">
         <div class="card-icon" style="color: #34a853;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="card-info">
           <span class="val">{{ "%.0f"|format(stats.avg_attendance) }}%</span>
-          <span class="lbl">Avg. Attendance</span>
+          <span class="lbl">Attendance</span>
         </div>
       </div>
       <div class="mini-kpi-card glass">
         <div class="card-icon" style="color: #3ea6ff;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="card-info">
           <span class="val">{{ "%.0f"|format(stats.avg_wellness) }}%</span>
-          <span class="lbl">Cyber-Wellness</span>
+          <span class="lbl">Wellness</span>
         </div>
       </div>
     </div>
 
     <!-- 2. Risk Distribution Doughnut chart card -->
-    <div class="panel glass" style="height: auto; margin-bottom: 20px; padding: 20px;">
-      <h3 style="margin-bottom: 12px; font-size: 13px;">RISK DISTRIBUTION</h3>
+    <div class="panel glass" style="height: auto; margin-bottom: 16px; padding: 16px;">
+      <h3 style="margin-bottom: 10px; font-size: 12px; font-weight: 800;">COHORT RISK DISTRIBUTION</h3>
       <div class="risk-distribution-container">
         <div class="chart-wrapper-donut">
           <canvas id="riskDonutCanvas" 
@@ -150,90 +204,21 @@
           </div>
         </div>
       </div>
-      <div class="view-link-row">
-        <a href="{{ url_for('analytics.student_analytics') }}" class="view-link">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          View Risk Report
-        </a>
-      </div>
     </div>
 
-    <!-- 3. AI Quick Actions panel -->
-    <div class="panel glass" style="height: auto; margin-bottom: 20px; padding: 20px;">
-      <h3 style="margin-bottom: 12px; font-size: 13px;">AI QUICK ACTIONS</h3>
-      <div class="quick-actions-list">
-        <div class="action-item" onclick="submitQuickAction('Identify High Risk Students')">
-          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span>Identify High Risk Students</span>
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="action-item" onclick="submitQuickAction('Generate Class Performance Map')">
-          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span>Generate Class Performance Map</span>
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="action-item" onclick="submitQuickAction('Recommend Interventions')">
-          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <span>Recommend Interventions</span>
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="action-item" onclick="submitQuickAction('Explain Student Risk Factors')">
-          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
-          <span>Explain Student Risk Factors</span>
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-        <div class="action-item" onclick="submitQuickAction('Generate Student Report')">
-          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <span>Generate Student Report</span>
-          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. Recent Alerts panel -->
-    <div class="panel glass" style="height: auto; padding: 20px;">
-      <h3 style="margin-bottom: 12px; font-size: 13px;">RECENT ALERTS</h3>
-      <div class="recent-alerts-list">
-        <div class="alert-item">
-          <span class="dot red"></span>
-          <div class="alert-text">
-            <span>5 students are at High Risk</span>
-            <span class="time">10:25 AM</span>
-          </div>
-        </div>
-        <div class="alert-item">
-          <span class="dot orange"></span>
-          <div class="alert-text">
-            <span>14 students have low attendance</span>
-            <span class="time">10:20 AM</span>
-          </div>
-        </div>
-        <div class="alert-item">
-          <span class="dot yellow"></span>
-          <div class="alert-text">
-            <span>3 students have poor cyber wellness</span>
-            <span class="time">10:15 AM</span>
-          </div>
-        </div>
-      </div>
-      <div class="view-link-row" style="margin-top: 10px;">
-        <a href="{{ url_for('dashboard.view_dashboard') }}" class="view-link" style="color: #ff4d4d;">
-          View All Alerts
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </a>
-      </div>
+    <!-- 3. Advisory Safety Card -->
+    <div class="panel glass" style="height: auto; padding: 16px; background-color: rgba(124, 92, 255, 0.05); border: 1px solid rgba(124, 92, 255, 0.25);">
+      <h3 style="margin-bottom: 6px; font-size: 12px; font-weight: 800; color: var(--color-accent);">🛡️ ADVISORY DECISION SUPPORT</h3>
+      <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4; margin: 0;">
+        All Copilot outputs are grounded decision-support recommendations. Educator confirmation is strictly required before applying any official interventions or sharing reports.
+      </p>
     </div>
   </div>
 </div>
 
-<!-- Floating Action red Microphone Button -->
-<button class="floating-action-mic-btn" id="floatingMicBtn" title="Activate voice commands">
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-</button>
-
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    // Set current time for greeting message
+    // Set current time
     const now = new Date();
     let hours = now.getHours();
     const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -242,60 +227,16 @@
     hours = hours ? hours : 12;
     document.getElementById("greetingTime").textContent = `${hours}:${minutes} ${ampm}`;
 
-    // Initialize Risk Donut Chart
     initDonutChart();
 
-    // Bind event listeners
     const textInput = document.getElementById("chatTextInput");
     const sendBtn = document.getElementById("chatSendBtn");
-    const genBtn = document.getElementById("genSuggestionsBtn");
-    const studentIdInput = document.getElementById("studentIdInput");
 
-    sendBtn.addEventListener("click", sendUserQuery);
+    sendBtn.addEventListener("click", sendUserFreeform);
     textInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") sendUserQuery();
+      if (e.key === "Enter") sendUserFreeform();
     });
 
-    genBtn.addEventListener("click", () => {
-      const sid = studentIdInput.value.trim();
-      if (!sid) {
-        addChatMessage("System", "Please specify a valid Student ID in the field to load recommendations.", true);
-        return;
-      }
-      addChatMessage("You", `Generate AI recommendations for Student ID ${sid}.`);
-      
-      const thinkingId = addChatMessage("AI Assistant", "Consulting service...", false, true);
-
-      fetch("/assistant/suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: sid })
-      })
-      .then(res => res.json())
-      .then(data => {
-        removeChatMessage(thinkingId);
-        if (data.success) {
-          addChatMessage("AI Assistant", data.response);
-          speakResponse(data.response);
-        } else {
-          addChatMessage("AI Assistant", `Error: ${data.message}`);
-        }
-      })
-      .catch(err => {
-        removeChatMessage(thinkingId);
-        addChatMessage("AI Assistant", "System Connection error.");
-      });
-    });
-
-    // Suggestion chips listeners
-    document.querySelectorAll(".chip-btn").forEach(chip => {
-      chip.addEventListener("click", () => {
-        textInput.value = chip.textContent;
-        sendUserQuery();
-      });
-    });
-
-    // Voice recognition handlers
     setupVoiceRecognition();
   });
 
@@ -312,8 +253,8 @@
         labels: ['High Risk', 'Medium Risk', 'Low Risk'],
         datasets: [{
           data: [high, medium, low],
-          backgroundColor: ['#FF0000', '#FF7A00', '#34A853'],
-          borderColor: '#1A1A1A',
+          backgroundColor: ['#E5484D', '#FFB224', '#30A46C'],
+          borderColor: '#151925',
           borderWidth: 2
         }]
       },
@@ -321,16 +262,12 @@
         responsive: true,
         maintainAspectRatio: false,
         cutout: '65%',
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
+        plugins: { legend: { display: false } }
       }
     });
   }
 
-  function addChatMessage(sender, text, isSystem = false, isThinking = false) {
+  function addChatMessage(sender, text, isSystem = false, isThinking = false, metadata = null) {
     const wrapper = document.getElementById("chatDisplayWrapper");
     const row = document.createElement("div");
     row.className = `chat-message-row ${sender === 'You' ? 'user' : (isSystem ? 'system' : 'assistant')}`;
@@ -341,6 +278,9 @@
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar";
     avatar.textContent = sender === 'You' ? 'U' : (isSystem ? 'S' : 'AI');
+    if (sender !== 'You' && !isSystem) {
+      avatar.style.background = "linear-gradient(135deg, #7C5CFF 0%, #4D8DFF 100%)";
+    }
 
     const contentWrapper = document.createElement("div");
     contentWrapper.className = "msg-content-wrapper";
@@ -351,19 +291,36 @@
 
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
-    
-    // Support markdown-like linebreaks
-    const pText = text.replace(/\n/g, "<br>");
-    bubble.innerHTML = `<p>${pText}</p>`;
+
+    if (isThinking) {
+      bubble.innerHTML = '<p style="margin:0; font-style:italic; color:var(--color-accent);">🧠 Analyzing grounded educational records...</p>';
+    } else {
+      // Format markdown elements (headers, bold, lists, linebreaks)
+      let formatted = text
+        .replace(/### (.*?)\n/g, '<h4 style="margin:8px 0 4px 0; color:#fff; font-size:13px; font-weight:800;">$1</h4>')
+        .replace(/## (.*?)\n/g, '<h3 style="margin:10px 0 4px 0; color:#fff; font-size:14px; font-weight:800;">$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+      
+      bubble.innerHTML = `<div style="font-size:12px; line-height:1.5;">${formatted}</div>`;
+
+      if (metadata && metadata.provider) {
+        const metaPill = document.createElement("div");
+        metaPill.style.marginTop = "8px";
+        metaPill.style.fontSize = "10px";
+        metaPill.style.color = "var(--text-secondary)";
+        metaPill.innerHTML = `<span>Source: <b>${metadata.provider}</b> (${metadata.model || 'Standard'})</span>`;
+        bubble.appendChild(metaPill);
+      }
+    }
 
     const time = document.createElement("span");
     time.className = "msg-time";
     const now = new Date();
-    let hours = now.getHours();
+    let hours = now.getHours() % 12 || 12;
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
+    const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
     time.textContent = `${hours}:${minutes} ${ampm}`;
 
     contentWrapper.appendChild(name);
@@ -383,46 +340,116 @@
     if (el) el.remove();
   }
 
-  function sendUserQuery() {
-    const textInput = document.getElementById("chatTextInput");
-    const studentIdInput = document.getElementById("studentIdInput");
-    const query = textInput.value.trim();
-    if (!query) return;
+  function setButtonsDisabled(disabled) {
+    document.querySelectorAll(".copilot-action-btn, #chatSendBtn").forEach(btn => {
+      btn.disabled = disabled;
+      btn.style.opacity = disabled ? "0.6" : "1.0";
+    });
+  }
 
-    textInput.value = "";
-    addChatMessage("You", query);
+  function executeCopilotAction(actionType) {
+    const sid = document.getElementById("studentIdInput").value;
+    const duration = document.getElementById("durationSelect").value;
+    const compareSid = document.getElementById("compareIdInput").value;
 
-    const thinkingId = addChatMessage("AI Assistant", "Thinking...", false, true);
+    if (actionType !== 'class_summary' && !sid) {
+      addChatMessage("System", "Please select a Target Student from the dropdown above to execute this action.", true);
+      return;
+    }
 
-    const sid = studentIdInput.value.trim();
-    const requestPayload = { query: query };
-    if (sid) requestPayload.student_id = sid;
+    if (actionType === 'compare_students' && (!sid || !compareSid)) {
+      addChatMessage("System", "Please select both a Target Student and a Compare Student from the dropdowns above.", true);
+      return;
+    }
 
-    fetch("/assistant/query", {
+    const actionLabels = {
+      explain_risk: `Explain Learning Risk for Student #${sid}`,
+      study_plan: `Generate ${duration}-Day Study Plan for Student #${sid}`,
+      identify_weak_topics: `Identify Critical Learning Gaps for Student #${sid}`,
+      generate_intervention: `Draft Official Intervention Plan for Student #${sid}`,
+      class_summary: "Summarize Classroom Cohort Performance",
+      compare_students: `Compare Student #${sid} vs Student #${compareSid}`,
+      parent_summary: `Draft Parent Progress Letter for Student #${sid}`,
+      suggest_actions: `Suggest Immediate Teacher Actions for Student #${sid}`
+    };
+
+    addChatMessage("You", actionLabels[actionType] || actionType);
+    const thinkingId = addChatMessage("AI Teacher Copilot", "Analyzing...", false, true);
+
+    setButtonsDisabled(true);
+
+    const payload = {
+      action: actionType,
+      student_id: sid ? parseInt(sid) : null,
+      duration_days: parseInt(duration),
+      compare_student_id: compareSid ? parseInt(compareSid) : null,
+      class_name: "All",
+      section: "All"
+    };
+
+    fetch("/assistant/copilot_action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestPayload)
+      body: JSON.stringify(payload)
     })
     .then(res => res.json())
     .then(data => {
       removeChatMessage(thinkingId);
-      if (data.success) {
-        addChatMessage("AI Assistant", data.response);
+      setButtonsDisabled(false);
+      if (data.response) {
+        addChatMessage("AI Teacher Copilot", data.response, false, false, data);
         speakResponse(data.response);
       } else {
-        addChatMessage("AI Assistant", `System error: ${data.message}`);
+        addChatMessage("AI Teacher Copilot", `⚠️ Service Notice: ${data.error || 'No response generated.'}`);
       }
     })
     .catch(err => {
       removeChatMessage(thinkingId);
-      addChatMessage("AI Assistant", "System Connection error.");
+      setButtonsDisabled(false);
+      addChatMessage("AI Teacher Copilot", `⚠️ Connection error: ${err.message}`);
     });
   }
 
-  function submitQuickAction(actionName) {
+  function sendUserFreeform() {
     const textInput = document.getElementById("chatTextInput");
-    textInput.value = actionName;
-    sendUserQuery();
+    const query = textInput.value.trim();
+    if (!query) return;
+
+    const sid = document.getElementById("studentIdInput").value;
+    textInput.value = "";
+
+    addChatMessage("You", query);
+    const thinkingId = addChatMessage("AI Teacher Copilot", "Analyzing...", false, true);
+
+    setButtonsDisabled(true);
+
+    const payload = {
+      action: "general_inquiry",
+      query: query,
+      student_id: sid ? parseInt(sid) : null
+    };
+
+    fetch("/assistant/copilot_action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      removeChatMessage(thinkingId);
+      setButtonsDisabled(false);
+      if (data.response) {
+        addChatMessage("AI Teacher Copilot", data.response, false, false, data);
+        speakResponse(data.response);
+      } else {
+        addChatMessage("AI Teacher Copilot", `⚠️ Service Notice: ${data.error || 'No response generated.'}`);
+      }
+    })
+    .catch(err => {
+      removeChatMessage(thinkingId);
+      setButtonsDisabled(false);
+      addChatMessage("AI Teacher Copilot", `⚠️ Connection error: ${err.message}`);
+    });
   }
 
   function speakResponse(text) {
@@ -430,9 +457,7 @@
     if (!check || !check.checked) return;
 
     if ('speechSynthesis' in window) {
-      // Cancel ongoing speech
       window.speechSynthesis.cancel();
-      // Remove simple markdown markers for speech
       const cleaned = text.replace(/[*#`•-]/g, '').trim();
       const utterance = new SpeechSynthesisUtterance(cleaned);
       window.speechSynthesis.speak(utterance);
@@ -446,36 +471,22 @@
     const recognizer = new SpeechRecognition();
     recognizer.continuous = false;
     recognizer.lang = 'en-US';
-    recognizer.interimResults = false;
 
-    const micInputBtn = document.getElementById("chatInputMicBtn");
-    const micFloatingBtn = document.getElementById("floatingMicBtn");
+    const micBtn = document.getElementById("chatInputMicBtn");
     const textInput = document.getElementById("chatTextInput");
 
-    const onStartListening = () => {
+    micBtn.addEventListener("click", () => {
       recognizer.start();
-      micInputBtn.style.color = "#FF0000";
-      micInputBtn.style.backgroundColor = "rgba(255, 0, 0, 0.08)";
-      micFloatingBtn.style.backgroundColor = "#cc0000";
-    };
-
-    const onStopListening = () => {
-      micInputBtn.style.color = "";
-      micInputBtn.style.backgroundColor = "";
-      micFloatingBtn.style.backgroundColor = "";
-    };
-
-    micInputBtn.addEventListener("click", onStartListening);
-    micFloatingBtn.addEventListener("click", onStartListening);
+      micBtn.style.color = "var(--color-danger)";
+    });
 
     recognizer.onresult = (e) => {
-      const resultText = e.results[0][0].transcript;
-      textInput.value = resultText;
-      sendUserQuery();
+      textInput.value = e.results[0][0].transcript;
+      sendUserFreeform();
     };
 
-    recognizer.onerror = onStopListening;
-    recognizer.onend = onStopListening;
+    recognizer.onend = () => { micBtn.style.color = ""; };
+    recognizer.onerror = () => { micBtn.style.color = ""; };
   }
 </script>
 {% endblock %}

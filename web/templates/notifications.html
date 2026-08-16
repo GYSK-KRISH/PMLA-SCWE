@@ -1,52 +1,179 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}System Notifications - PMLA-SCWE{% endblock %}
-{% block header_title %}Notifications Log{% endblock %}
+{% block title %}PMLA-SCWE Smart Notification Center{% endblock %}
+{% block header_title %}SMART NOTIFICATION & DECISION-SUPPORT CENTER{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid" style="grid-template-columns: 1fr;">
-  <div class="dashboard-card" style="max-width: 700px; margin: 0 auto;">
-    <h2 style="color: #FFFFFF; font-size: 16px; margin-bottom: 20px; font-weight: bold; border-bottom: 1px solid #2A2A2A; padding-bottom: 10px;">🔔 ACTIVE NOTIFICATIONS & WARNINGS</h2>
-
-    {% if not notifications %}
-      <div style="text-align: center; padding: 40px; color: #717171;">
-        <span style="font-size: 32px; display: block; margin-bottom: 10px;">🟢</span>
-        All systems are running optimally. No notifications flagged.
-      </div>
-    {% else %}
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        {% for n in notifications %}
-          {% set is_unread = n.is_read == 0 %}
-          {% set color = '#FFFFFF' %}
-          {% set bg_color = '#151515' %}
-          {% set border_color = '#2A2A2A' %}
-
-          {% if n.priority == 'HIGH' %}
-            {% set color = '#FF4D4D' %}
-            {% set bg_color = '#271010' %}
-            {% set border_color = '#4A1A1A' %}
-          {% elif n.priority == 'MEDIUM' %}
-            {% set color = '#FFD600' %}
-            {% set bg_color = '#272510' %}
-            {% set border_color = '#4A421A' %}
-          {% endif %}
-
-          <div style="background-color: {{ bg_color }}; border: 1px solid {{ border_color }}; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: {{ color }}; font-weight: bold; font-size: 13px;">{{ n.title }}</span>
-              <span style="color: #E5E5E5; font-size: 12px;">{{ n.message }}</span>
-              <span style="color: #717171; font-size: 10px; margin-top: 4px;">{{ n.created_at }}</span>
-            </div>
-
-            {% if is_unread %}
-              <a href="{{ url_for('settings.read_notification', nid=n.notification_id) }}" class="btn-primary" style="padding: 6px 12px; font-size: 11px; text-decoration: none; border-radius: 4px;">Mark Read</a>
-            {% else %}
-              <span style="color: #717171; font-size: 11px; font-weight: bold; padding: 6px 12px;">Read</span>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+<!-- 1. Top KPI Metrics Overview -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 20px;">
+  <div class="kpi-card glass">
+    <span class="title">ACTIVE UNREAD ALERTS</span>
+    <span class="value" style="color: {% if unread_count > 0 %}#FFB224{% else %}#30A46C{% endif %};">{{ unread_count }}</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">HIGH PRIORITY CASES</span>
+    <span class="value" style="color: {% if high_priority_count > 0 %}#E5484D{% else %}#30A46C{% endif %};">{{ high_priority_count }}</span>
+  </div>
+  <div class="kpi-card glass">
+    <span class="title">TOTAL FILTERED ALERTS</span>
+    <span class="value" style="color: #fff;">{{ notifications|length }}</span>
+  </div>
+  <div class="kpi-card glass" style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+    <button class="btn" onclick="markAllRead()" style="background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; font-size: 11px; padding: 8px 14px; font-weight: 700; border-radius: 6px; width: 100%;">
+      ✓ Mark All Read
+    </button>
   </div>
 </div>
+
+<!-- 2. Interactive Filter & Sorting Bar -->
+<div class="panel glass" style="height: auto; padding: 14px 20px; margin-bottom: 20px;">
+  <form method="GET" action="{{ url_for('notifications.view_notifications') }}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="prioSelect" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Priority:</label>
+      <select name="priority" id="prioSelect" class="form-control" style="width: 120px; font-size: 11px; padding: 5px 8px;" onchange="this.form.submit()">
+        <option value="All" {% if selected_priority == 'All' %}selected{% endif %}>All Priorities</option>
+        {% for p in priorities %}
+          <option value="{{ p }}" {% if selected_priority == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="typeSelect" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Category:</label>
+      <select name="alert_type" id="typeSelect" class="form-control" style="width: 150px; font-size: 11px; padding: 5px 8px;" onchange="this.form.submit()">
+        <option value="All" {% if selected_type == 'All' %}selected{% endif %}>All Categories</option>
+        {% for at in alert_types %}
+          <option value="{{ at }}" {% if selected_type == at %}selected{% endif %}>{{ at }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label for="statusSelect" style="font-size: 11px; font-weight: 700; color: var(--text-secondary);">Status:</label>
+      <select name="action_status" id="statusSelect" class="form-control" style="width: 130px; font-size: 11px; padding: 5px 8px;" onchange="this.form.submit()">
+        <option value="All" {% if selected_status == 'All' %}selected{% endif %}>All Statuses</option>
+        {% for st in action_statuses %}
+          <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="margin-left: auto;">
+      <a href="{{ url_for('notifications.view_notifications') }}" class="btn" style="font-size: 11px; padding: 5px 10px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border);">
+        Reset Filters
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- 3. Notification Cards Feed -->
+<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+  {% if notifications %}
+    {% for n in notifications %}
+      {% set prio = n.priority %}
+      {% set prio_color = '#E5484D' if prio == 'HIGH' else ('#FFB224' if prio == 'MEDIUM' else ('#30A46C' if prio == 'SUCCESS' else '#4D8DFF')) %}
+      {% set is_unread = (n.is_read == 0) %}
+
+      <div class="glass" style="padding: 16px 20px; border-radius: 8px; background: {% if is_unread %}var(--bg-secondary){% else %}rgba(16,19,29,0.5){% endif %}; border: 1px solid var(--border); border-left: 4px solid {{ prio_color }};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="status-badge" style="background: rgba(255,255,255,0.06); color: {{ prio_color }}; font-weight: 800; font-size: 10px;">
+              {% if prio == 'SUCCESS' %}🌟 MILESTONE ACHIEVED{% else %}● {{ prio }} PRIORITY{% endif %}
+            </span>
+            <span style="font-size: 11px; color: var(--text-secondary);">[{{ n.alert_type }}]</span>
+            {% if is_unread %}
+              <span class="status-badge warning" style="font-size: 9px; padding: 2px 6px;">UNREAD</span>
+            {% endif %}
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary);">
+            {{ n.created_at }}
+          </div>
+        </div>
+
+        <!-- Title & Message -->
+        <h4 style="margin: 4px 0 6px 0; font-size: 14px; font-weight: 800; color: #fff;">{{ n.title }}</h4>
+        <p style="margin: 0 0 10px 0; font-size: 12px; color: #CBD5E1; line-height: 1.5;">{{ n.message }}</p>
+
+        <!-- Decision Action Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04);">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            {% if n.student_id %}
+              <a href="{{ url_for('students.student_profile', student_id=n.student_id) }}" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px; text-decoration: none;">
+                👤 Open Student 360° Profile
+              </a>
+              <a href="{{ url_for('interventions.view_interventions') }}" class="btn" style="padding: 4px 10px; font-size: 11px; background: rgba(48,196,141,0.15); color: #30C48D; border: 1px solid rgba(48,196,141,0.3); text-decoration: none;">
+                🛠️ Create Intervention
+              </a>
+            {% endif %}
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 10px; color: var(--text-secondary);">Status:</label>
+            <select class="form-control" style="font-size: 10px; padding: 3px 6px; width: 110px;" onchange="updateActionStatus({{ n.notification_id }}, this.value)">
+              {% for st in action_statuses %}
+                <option value="{{ st }}" {% if n.action_status == st %}selected{% endif %}>{{ st }}</option>
+              {% endfor %}
+            </select>
+
+            {% if is_unread %}
+              <button class="btn" onclick="markOneRead({{ n.notification_id }})" style="padding: 4px 8px; font-size: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-secondary);">
+                ✓ Mark Read
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel glass" style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+      ✓ No active notifications matching the selected criteria.
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  function markOneRead(id) {
+    fetch("{{ url_for('notifications.mark_read') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notification_id: id })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      }
+    });
+  }
+
+  function markAllRead() {
+    fetch("{{ url_for('notifications.mark_all_read') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      }
+    });
+  }
+
+  function updateActionStatus(id, newStatus) {
+    fetch("{{ url_for('notifications.update_status') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notification_id: id, action_status: newStatus })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert("Error: " + data.message);
+      }
+    });
+  }
+</script>
 {% endblock %}

@@ -1,11 +1,17 @@
-"""CustomTkinter application controller managing panels and authentication states."""
+"""PySide6 application controller managing panels and authentication states."""
 
 from __future__ import annotations
-import tkinter as tk
-from tkinter import messagebox
-import customtkinter as ctk
+import sys
+import os
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QFrame, QLabel, QPushButton,
+    QVBoxLayout, QHBoxLayout, QGridLayout, QStackedWidget, QDialog,
+    QMessageBox, QLineEdit, QScrollArea, QMenu
+)
+from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtGui import QFont, QIcon, QAction
 
-# Import Views
+# Import Views (These will be migrated to PySide6 in subsequent phases)
 from .login import LoginFrame
 from .dashboard import DashboardFrame
 from .students import StudentsFrame
@@ -16,545 +22,650 @@ from .analytics_view import AnalyticsViewFrame
 from .reports_view import ReportsFrame
 from .ai_assistant_view import AIAssistantFrame
 from .users_view import UsersFrame
-
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+from .interventions_view import InterventionsFrame
 
 
-# Placeholder Frames for upcoming features in future phases
-class PlaceholderFrame(ctk.CTkFrame):
-    def __init__(self, parent, title_text):
-        super().__init__(parent, fg_color="transparent")
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+# Premium Dark CSS Stylesheet
+from .theme import GLOBAL_STYLESHEET, NAV_ITEMS
 
-        inner = ctk.CTkFrame(self, fg_color="#161625", corner_radius=12)
-        inner.grid(row=0, column=0, padx=40, pady=40, sticky="nsew")
-        inner.grid_columnconfigure(0, weight=1)
-        inner.grid_rowconfigure(0, weight=1)
+class NotificationsDialog(QDialog):
+    """Upgraded Version 1.6 Decision-Support Notification Center for PySide6."""
 
-        content_box = ctk.CTkFrame(inner, fg_color="transparent")
-        content_box.grid(row=0, column=0)
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Smart Decision-Support Notification Center")
+        self.setMinimumSize(560, 520)
+        self.setStyleSheet(GLOBAL_STYLESHEET)
+        self.filter_priority = "All"
 
-        title = ctk.CTkLabel(
-            content_box,
-            text=title_text.upper(),
-            font=ctk.CTkFont(family="Outfit", size=24, weight="bold"),
-            text_color="#00d2ff"
-        )
-        title.pack(pady=10)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(10)
 
-        info = ctk.CTkLabel(
-            content_box,
-            text="This section is currently undergoing migration in Phase 5-9.\nIt will connect seamlessly to core services once built.",
-            font=ctk.CTkFont(family="Outfit", size=13),
-            text_color="#95a5a6"
-        )
-        info.pack(pady=10)
+        # Header
+        top_h = QHBoxLayout()
+        title_lbl = QLabel("🔔 SMART NOTIFICATION & DECISION CENTER", self)
+        title_lbl.setFont(QFont("Outfit", 13, QFont.Bold))
+        title_lbl.setStyleSheet("color: #FFFFFF;")
+        top_h.addWidget(title_lbl)
+        top_h.addStretch(1)
 
+        btn_mark_all = QPushButton("Mark All Read", self)
+        btn_mark_all.setStyleSheet("background: #151925; color: #F5F7FA; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 4px 10px; font-size: 11px;")
+        btn_mark_all.clicked.connect(self.mark_all_read_action)
+        top_h.addWidget(btn_mark_all)
+        layout.addLayout(top_h)
 
-class MainApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("PMLA-SCWE - Student Analytics & Cyber-Wellbeing Engine")
-        self.geometry("1100x680")
-        self.minsize(1000, 600)
+        # Filter Bar
+        f_bar = QHBoxLayout()
+        f_bar.addWidget(QLabel("Filter Priority:"))
+        self.prio_combo = QComboBox(self)
+        self.prio_combo.addItems(["All", "HIGH", "MEDIUM", "SUCCESS", "INFO"])
+        self.prio_combo.currentTextChanged.connect(self.on_filter_changed)
+        f_bar.addWidget(self.prio_combo)
+        f_bar.addStretch(1)
+        layout.addLayout(f_bar)
 
-        # Main Layout Grid
-        self.grid_columnconfigure(0, weight=0)  # Sidebar (initially hidden)
-        self.grid_columnconfigure(1, weight=1)  # Content area
-        self.grid_rowconfigure(0, weight=1)
+        # Scrollable Notifications Feed
+        self.scroll = QScrollArea(self)
+        self.scroll.setWidgetResizable(True)
+        self.scroll_content = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_content)
+        self.scroll_layout.setContentsMargins(4, 4, 4, 4)
+        self.scroll_layout.setSpacing(8)
+        self.scroll_layout.setAlignment(Qt.AlignTop)
+        self.scroll.setWidget(self.scroll_content)
+        layout.addWidget(self.scroll)
 
-        # Active User Context Session
-        self.current_user = None
+        self.refresh_list()
 
-        # Sidebar navigation container
-        self.sidebar = None
-        self.top_bar = None
+        close_btn = QPushButton("CLOSE NOTIFICATION CENTER", self)
+        close_btn.setObjectName("PrimaryButton")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
 
-        # Content frame container
-        self.content_container = ctk.CTkFrame(self, fg_color="#0F0F0F")
-        self.content_container.grid(row=0, column=1, sticky="nsew")
-        self.content_container.grid_rowconfigure(0, weight=1)
-        self.content_container.grid_columnconfigure(0, weight=1)
+    def on_filter_changed(self, text: str):
+        self.filter_priority = text
+        self.refresh_list()
 
-        # Login View initially loaded
-        self.active_frame = None
-        self.show_login_screen()
+    def mark_all_read_action(self):
+        from core.notification_service import mark_all_notifications_as_read
+        mark_all_notifications_as_read()
+        if hasattr(self.parent(), "refresh_top_bar_counts"):
+            self.parent().refresh_top_bar_counts()
+        self.refresh_list()
 
-    def show_login_screen(self):
-        # Clear sidebar if it exists
-        if self.sidebar:
-            self.sidebar.destroy()
-            self.sidebar = None
-            self.grid_columnconfigure(0, weight=0)
-
-        # Clear top bar if it exists
-        if self.top_bar:
-            self.top_bar.destroy()
-            self.top_bar = None
-
-        # Reset grid weights
-        self.content_container.grid_rowconfigure(0, weight=1)
-        self.content_container.grid_rowconfigure(1, weight=0)
-
-        # Render login frame in center of content area
-        if self.active_frame:
-            self.active_frame.destroy()
-
-        login_center = ctk.CTkFrame(self.content_container, fg_color="transparent")
-        login_center.grid(row=0, column=0)
-
-        self.active_frame = LoginFrame(
-            login_center,
-            controller=self,
-            on_login_success=self.on_login_success
-        )
-        self.active_frame.pack(padx=20, pady=20)
-
-    def on_login_success(self):
-        # Create Top Bar Header first
-        self.create_top_bar()
-
-        # Create Sidebar
-        self.create_sidebar()
-        
-        # Switch to Dashboard
-        self.switch_to_frame("dashboard")
-
-    def create_top_bar(self):
-        # Configure content container row weights
-        self.content_container.grid_rowconfigure(0, weight=0)
-        self.content_container.grid_rowconfigure(1, weight=1)
-
-        self.top_bar = ctk.CTkFrame(self.content_container, fg_color="#0F0F0F", height=50, corner_radius=0)
-        self.top_bar.grid(row=0, column=0, sticky="ew", padx=20, pady=(15, 0))
-
-        # Brand Text
-        lbl = ctk.CTkLabel(
-            self.top_bar,
-            text="Student Analytics Command Center",
-            font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            text_color="#AAAAAA"
-        )
-        lbl.pack(side="left", padx=10)
-
-        # Right buttons panel
-        right_panel = ctk.CTkFrame(self.top_bar, fg_color="transparent")
-        right_panel.pack(side="right", padx=10)
-
-        # Notification Bell
-        self.bell_btn = ctk.CTkButton(
-            right_panel,
-            text="🔔 0",
-            width=55,
-            height=30,
-            fg_color="#1A1A1A",
-            border_color="#2A2A2A",
-            border_width=1,
-            hover_color="#272727",
-            text_color="#FFFFFF",
-            font=ctk.CTkFont(family="Outfit", size=11, weight="bold"),
-            command=self.show_notifications_dropdown
-        )
-        self.bell_btn.pack(side="left", padx=5)
-
-        # Profile Dropdown
-        self.profile_btn = ctk.CTkButton(
-            right_panel,
-            text="👤 Admin ▼",
-            width=150,
-            height=30,
-            fg_color="#1A1A1A",
-            border_color="#2A2A2A",
-            border_width=1,
-            hover_color="#272727",
-            text_color="#FFFFFF",
-            font=ctk.CTkFont(family="Outfit", size=11, weight="bold"),
-            command=self.show_profile_dropdown
-        )
-        self.profile_btn.pack(side="left", padx=5)
-
-        self.refresh_top_bar_counts()
-
-    def refresh_top_bar_counts(self):
-        if not self.current_user:
-            return
-        
-        # Refresh notifications count
-        try:
-            from core.notification_service import get_unread_notification_count
-            unread = get_unread_notification_count()
-            self.bell_btn.configure(text=f"🔔 {unread}")
-            if unread > 0:
-                self.bell_btn.configure(text_color="#FF4D4D")
-            else:
-                self.bell_btn.configure(text_color="#FFFFFF")
-        except Exception:
-            pass
-
-        # Refresh profile text
-        fname = self.current_user.get("full_name", "Admin")
-        role = self.current_user.get("role", "Teacher")
-        self.profile_btn.configure(text=f"👤 {fname} ({role}) ▼")
-
-    def show_notifications_dropdown(self):
-        popup = ctk.CTkToplevel(self)
-        popup.title("Notifications")
-        popup.geometry("380x350")
-        popup.configure(fg_color="#181818")
-        popup.resizable(False, False)
-        popup.transient(self)
-        popup.grab_set()
-
-        # Center relative to parent window
-        x = self.winfo_x() + (self.winfo_width() // 2) - 190
-        y = self.winfo_y() + (self.winfo_height() // 2) - 175
-        popup.geometry(f"+{x}+{y}")
-
-        title_lbl = ctk.CTkLabel(popup, text="🔔 SYSTEM NOTIFICATIONS", font=ctk.CTkFont(family="Outfit", size=14, weight="bold"), text_color="#FFFFFF")
-        title_lbl.pack(pady=12)
-
-        # ScrollFrame for list
-        scroll = ctk.CTkScrollableFrame(popup, fg_color="#121212", border_color="#2A2A2A", border_width=1, corner_radius=8, height=220)
-        scroll.pack(fill="both", expand=True, padx=15, pady=5)
+    def refresh_list(self):
+        while self.scroll_layout.count() > 0:
+            item = self.scroll_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         try:
-            from core.notification_service import get_notifications, mark_notification_as_read, generate_system_alerts
-            generate_system_alerts()
-            notifs = get_notifications()
+            from core.notification_service import get_notifications, mark_notification_as_read, update_notification_action_status, scan_and_generate_smart_alerts
+            scan_and_generate_smart_alerts()
+            notifs = get_notifications(priority=self.filter_priority if self.filter_priority != "All" else None)
         except Exception:
             notifs = []
 
         if not notifs:
-            lbl = ctk.CTkLabel(scroll, text="No system notifications active.", text_color="#717171", font=ctk.CTkFont(family="Outfit", size=12))
-            lbl.pack(pady=40)
-        else:
-            for idx, n in enumerate(notifs):
-                color = "#FFFFFF"
-                if n["priority"] == "HIGH":
-                    color = "#FF4D4D"
-                elif n["priority"] == "MEDIUM":
-                    color = "#FFD600"
-                
-                is_unread = n["is_read"] == 0
-                weight = "bold" if is_unread else "normal"
-
-                frame = ctk.CTkFrame(scroll, fg_color="#1C1C1C" if is_unread else "#151515", corner_radius=6)
-                frame.pack(fill="x", pady=2, padx=2)
-
-                txt_lbl = ctk.CTkLabel(
-                    frame,
-                    text=f"{n['title']}\n{n['message']}",
-                    text_color=color,
-                    font=ctk.CTkFont(family="Outfit", size=11, weight=weight),
-                    justify="left",
-                    wraplength=220
-                )
-                txt_lbl.pack(anchor="w", padx=10, pady=8)
-
-                if is_unread:
-                    def mark_read(nid=n["notification_id"]):
-                        mark_notification_as_read(nid)
-                        self.refresh_top_bar_counts()
-                        popup.destroy()
-                        self.show_notifications_dropdown()
-                    
-                    btn = ctk.CTkButton(
-                        frame,
-                        text="Mark Read",
-                        width=60,
-                        height=20,
-                        fg_color="#E50914",
-                        hover_color="#CC0000",
-                        text_color="#FFFFFF",
-                        font=ctk.CTkFont(family="Outfit", size=10, weight="bold"),
-                        command=mark_read
-                    )
-                    btn.pack(anchor="e", padx=10, pady=(0, 6))
-
-        # Close button
-        btn_close = ctk.CTkButton(popup, text="CLOSE WINDOW", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), command=popup.destroy)
-        btn_close.pack(fill="x", side="bottom", padx=15, pady=10)
-
-    def show_profile_dropdown(self):
-        popup = ctk.CTkToplevel(self)
-        popup.title("Admin Profile Menu")
-        popup.geometry("260x340")
-        popup.configure(fg_color="#181818")
-        popup.resizable(False, False)
-        popup.transient(self)
-        popup.grab_set()
-
-        x = self.winfo_x() + (self.winfo_width() // 2) - 130
-        y = self.winfo_y() + (self.winfo_height() // 2) - 170
-        popup.geometry(f"+{x}+{y}")
-
-        # Profile avatar
-        avatar_lbl = ctk.CTkLabel(popup, text="[ A ]", font=ctk.CTkFont(family="Outfit", size=28, weight="bold"), text_color="#E50914")
-        avatar_lbl.pack(pady=(15, 2))
-
-        name_lbl = ctk.CTkLabel(popup, text=self.current_user["full_name"], font=ctk.CTkFont(family="Outfit", size=13, weight="bold"), text_color="#FFFFFF")
-        name_lbl.pack()
-
-        role_lbl = ctk.CTkLabel(popup, text=self.current_user["role"], font=ctk.CTkFont(family="Outfit", size=11), text_color="#717171")
-        role_lbl.pack(pady=(0, 10))
-
-        def my_profile():
-            popup.destroy()
-            self.open_my_profile_dialog()
-
-        def change_pwd():
-            popup.destroy()
-            self.open_change_password_dialog()
-
-        def user_mgmt():
-            popup.destroy()
-            if self.current_user["role"] != "Admin":
-                messagebox.showwarning("Access Denied", "Only administrators can access User Accounts Management.")
-                return
-            self.switch_to_frame("users")
-
-        def db_status():
-            popup.destroy()
-            from core.database import get_db_status
-            status = get_db_status()
-            messagebox.showinfo("Database Connection", f"Backend: {status['backend']}\nDetails: {status['display']}")
-
-        def do_logout():
-            popup.destroy()
-            self.perform_logout()
-
-        ctk.CTkButton(popup, text="👤 My Profile", fg_color="transparent", text_color="#E5E5E5", hover_color="#212121", anchor="w", command=my_profile).pack(fill="x", padx=15, pady=2)
-        ctk.CTkButton(popup, text="🔒 Change Password", fg_color="transparent", text_color="#E5E5E5", hover_color="#212121", anchor="w", command=change_pwd).pack(fill="x", padx=15, pady=2)
-        
-        if self.current_user["role"] == "Admin":
-            ctk.CTkButton(popup, text="👥 User Management", fg_color="transparent", text_color="#E5E5E5", hover_color="#212121", anchor="w", command=user_mgmt).pack(fill="x", padx=15, pady=2)
-
-        ctk.CTkButton(popup, text="🗄 Database Status", fg_color="transparent", text_color="#E5E5E5", hover_color="#212121", anchor="w", command=db_status).pack(fill="x", padx=15, pady=2)
-        
-        line = ctk.CTkFrame(popup, height=1, fg_color="#2A2A2A")
-        line.pack(fill="x", padx=15, pady=10)
-
-        ctk.CTkButton(popup, text="🚪 Logout Profile", fg_color="#181818", border_color="#3A1A1A", border_width=1, hover_color="#3A1616", text_color="#FF4D4D", command=do_logout).pack(fill="x", padx=15, pady=(0, 10))
-
-    def open_my_profile_dialog(self):
-        win = ctk.CTkToplevel(self)
-        win.title("My Profile Details")
-        win.geometry("380x220")
-        win.configure(fg_color="#181818")
-        win.resizable(False, False)
-        win.transient(self)
-        win.grab_set()
-
-        x = self.winfo_x() + (self.winfo_width() // 2) - 190
-        y = self.winfo_y() + (self.winfo_height() // 2) - 110
-        win.geometry(f"+{x}+{y}")
-
-        title = ctk.CTkLabel(win, text="👤 MY ACCOUNT PROFILE", font=ctk.CTkFont(family="Outfit", size=14, weight="bold"), text_color="#FFFFFF")
-        title.pack(pady=15)
-
-        info_frame = ctk.CTkFrame(win, fg_color="transparent")
-        info_frame.pack(padx=20, fill="both", expand=True)
-
-        ctk.CTkLabel(info_frame, text=f"Username:  @{self.current_user['username']}", font=ctk.CTkFont(family="Outfit", size=12), text_color="#E5E5E5").pack(anchor="w", pady=4)
-        ctk.CTkLabel(info_frame, text=f"Full Name:  {self.current_user['full_name']}", font=ctk.CTkFont(family="Outfit", size=12), text_color="#E5E5E5").pack(anchor="w", pady=4)
-        ctk.CTkLabel(info_frame, text=f"Access Role:  {self.current_user['role']}", font=ctk.CTkFont(family="Outfit", size=12), text_color="#E5E5E5").pack(anchor="w", pady=4)
-        ctk.CTkLabel(info_frame, text=f"Status:  ● {self.current_user['status']}", font=ctk.CTkFont(family="Outfit", size=12, weight="bold"), text_color="#34A853").pack(anchor="w", pady=4)
-
-        ctk.CTkButton(win, text="CLOSE", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", command=win.destroy).pack(pady=15, padx=20, fill="x")
-
-    def open_change_password_dialog(self):
-        win = ctk.CTkToplevel(self)
-        win.title("Change Password")
-        win.geometry("400x320")
-        win.configure(fg_color="#181818")
-        win.resizable(False, False)
-        win.transient(self)
-        win.grab_set()
-
-        x = self.winfo_x() + (self.winfo_width() // 2) - 200
-        y = self.winfo_y() + (self.winfo_height() // 2) - 160
-        win.geometry(f"+{x}+{y}")
-
-        title = ctk.CTkLabel(win, text="🔒 UPDATE ACCOUNT PASSWORD", font=ctk.CTkFont(family="Outfit", size=14, weight="bold"), text_color="#FFFFFF")
-        title.pack(pady=15)
-
-        form_frame = ctk.CTkFrame(win, fg_color="transparent")
-        form_frame.pack(padx=30, fill="both", expand=True)
-
-        ctk.CTkLabel(form_frame, text="Current Password:", font=ctk.CTkFont(family="Outfit", size=11, weight="bold"), text_color="#AAAAAA").grid(row=0, column=0, sticky="w", pady=6)
-        old_entry = ctk.CTkEntry(form_frame, show="*", width=200, fg_color="#1A1A1A", border_color="#303030")
-        old_entry.grid(row=0, column=1, sticky="e", pady=6)
-
-        ctk.CTkLabel(form_frame, text="New Password:", font=ctk.CTkFont(family="Outfit", size=11, weight="bold"), text_color="#AAAAAA").grid(row=1, column=0, sticky="w", pady=6)
-        new_entry = ctk.CTkEntry(form_frame, show="*", width=200, fg_color="#1A1A1A", border_color="#303030")
-        new_entry.grid(row=1, column=1, sticky="e", pady=6)
-
-        ctk.CTkLabel(form_frame, text="Confirm Password:", font=ctk.CTkFont(family="Outfit", size=11, weight="bold"), text_color="#AAAAAA").grid(row=2, column=0, sticky="w", pady=6)
-        confirm_entry = ctk.CTkEntry(form_frame, show="*", width=200, fg_color="#1A1A1A", border_color="#303030")
-        confirm_entry.grid(row=2, column=1, sticky="e", pady=6)
-
-        status_lbl = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=12))
-        status_lbl.pack(pady=2)
-
-        btn_frame = ctk.CTkFrame(win, fg_color="transparent")
-        btn_frame.pack(fill="x", pady=15, padx=30)
-
-        def proceed():
-            old_val = old_entry.get()
-            new_val = new_entry.get()
-            conf_val = confirm_entry.get()
-
-            if not old_val or not new_val:
-                status_lbl.configure(text="Fields cannot remain empty.", text_color="#e74c3c")
-                return
-            if new_val != conf_val:
-                status_lbl.configure(text="Passwords do not match.", text_color="#e74c3c")
-                return
-            
-            from core.user_service import change_user_password
-            if change_user_password(self.current_user["user_id"], old_val, new_val):
-                status_lbl.configure(text="Password updated successfully!", text_color="#2ecc71")
-                win.after(1500, win.destroy)
-            else:
-                status_lbl.configure(text="Incorrect current password.", text_color="#e74c3c")
-
-        ctk.CTkButton(btn_frame, text="UPDATE PASSWORD", fg_color="#E50914", hover_color="#CC0000", command=proceed, width=150).pack(side="left", expand=True, padx=5)
-        ctk.CTkButton(btn_frame, text="CANCEL", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", command=win.destroy, width=120).pack(side="right", expand=True, padx=5)
-
-    def create_sidebar(self):
-        self.grid_columnconfigure(0, weight=1, minsize=220)
-        
-        self.sidebar = ctk.CTkFrame(self, fg_color="#0F0F0F", corner_radius=0)
-        self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_columnconfigure(0, weight=1)
-        self.sidebar.grid_columnconfigure(1, weight=0)
-
-        # Vertical separator border
-        sep = ctk.CTkFrame(self.sidebar, width=1, fg_color="#2A2A2A", corner_radius=0)
-        sep.grid(row=0, column=1, rowspan=15, sticky="ns")
-
-        # Brand Title
-        brand_lbl = ctk.CTkLabel(
-            self.sidebar,
-            text="PMLA-SCWE",
-            font=ctk.CTkFont(family="Outfit", size=22, weight="bold"),
-            text_color="#FFFFFF"
-        )
-        brand_lbl.grid(row=0, column=0, padx=20, pady=(25, 5), sticky="w")
-
-        v_lbl = ctk.CTkLabel(
-            self.sidebar,
-            text="v2.0 - Core Edition",
-            font=ctk.CTkFont(family="Outfit", size=11),
-            text_color="#717171"
-        )
-        v_lbl.grid(row=1, column=0, padx=20, pady=(0, 25), sticky="w")
-
-        # Sidebar Buttons Configuration
-        self.nav_buttons = {}
-        tabs = [
-            ("Dashboard", "dashboard"),
-            ("Student Directory", "students"),
-            ("Attendance Registry", "attendance"),
-            ("Assessments & Grades", "assessments"),
-            ("Cyber-Wellness Audit", "wellness"),
-            ("Predictive Analytics", "analytics"),
-            ("Reports & Exporters", "reports"),
-            ("AI Decision Assistant", "ai_assistant"),
-        ]
-
-        for idx, (title, name) in enumerate(tabs, start=2):
-            btn = ctk.CTkButton(
-                self.sidebar,
-                text=title,
-                anchor="w",
-                height=38,
-                fg_color="transparent",
-                text_color="#E5E5E5",
-                hover_color="#212121",
-                corner_radius=8,
-                font=ctk.CTkFont(family="Outfit", size=13),
-                command=lambda n=name: self.switch_to_frame(n)
-            )
-            btn.grid(row=idx, column=0, padx=15, pady=3, sticky="ew")
-            self.nav_buttons[name] = btn
-
-        # Logout Button
-        self.sidebar.grid_rowconfigure(10, weight=1)  # Spacer
-        
-        logout_btn = ctk.CTkButton(
-            self.sidebar,
-            text="LOGOUT USER",
-            height=38,
-            fg_color="#181818",
-            border_color="#3A1A1A",
-            border_width=1,
-            hover_color="#2A1515",
-            text_color="#FF4D4D",
-            corner_radius=8,
-            font=ctk.CTkFont(family="Outfit", size=12, weight="bold"),
-            command=self.perform_logout
-        )
-        logout_btn.grid(row=11, column=0, padx=15, pady=20, sticky="ew")
-
-    def switch_to_frame(self, name: str):
-        if not self.sidebar:
+            lbl = QLabel("No active notifications in this category.", self.scroll_content)
+            lbl.setStyleSheet("color: #8D96A8; padding: 20px;")
+            lbl.setAlignment(Qt.AlignCenter)
+            self.scroll_layout.addWidget(lbl)
             return
 
-        # Check Viewer access privileges!
+        for n in notifs:
+            prio = n.get("priority", "INFO")
+            prio_col = "#EF4444" if prio == "HIGH" else ("#F59E0B" if prio == "MEDIUM" else ("#10B981" if prio == "SUCCESS" else "#3B82F6"))
+            is_unread = (n.get("is_read") == 0)
+
+            card = QFrame(self.scroll_content)
+            card.setObjectName("InnerCardFrame")
+            card.setStyleSheet(
+                f"background-color: {'#151925' if is_unread else '#0F121C'}; "
+                f"border-left: 3px solid {prio_col}; border-radius: 6px; padding: 10px;"
+            )
+            c_layout = QVBoxLayout(card)
+            c_layout.setContentsMargins(10, 8, 10, 8)
+            c_layout.setSpacing(6)
+
+            # Top row: priority badge + time
+            top_r = QHBoxLayout()
+            p_badge = QLabel(f"● {prio} PRIORITY" if prio != "SUCCESS" else "🌟 MILESTONE ACHIEVED")
+            p_badge.setFont(QFont("Outfit", 9, QFont.Bold))
+            p_badge.setStyleSheet(f"color: {prio_col};")
+            top_r.addWidget(p_badge)
+
+            if n.get("action_status"):
+                st_lbl = QLabel(f"[{n['action_status']}]")
+                st_lbl.setFont(QFont("Outfit", 9))
+                st_lbl.setStyleSheet("color: #8D96A8;")
+                top_r.addWidget(st_lbl)
+
+            top_r.addStretch(1)
+
+            t_str = str(n.get("created_at") or "")[:16]
+            time_lbl = QLabel(t_str)
+            time_lbl.setFont(QFont("Outfit", 9))
+            time_lbl.setStyleSheet("color: #8D96A8;")
+            top_r.addWidget(time_lbl)
+            c_layout.addLayout(top_r)
+
+            # Title & Message
+            t_lbl = QLabel(n.get("title", ""))
+            t_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+            t_lbl.setStyleSheet("color: #F5F7FA;")
+            c_layout.addWidget(t_lbl)
+
+            m_lbl = QLabel(n.get("message", ""))
+            m_lbl.setFont(QFont("Outfit", 10))
+            m_lbl.setStyleSheet("color: #CBD5E1;")
+            m_lbl.setWordWrap(True)
+            c_layout.addWidget(m_lbl)
+
+            # Action Buttons Row
+            act_r = QHBoxLayout()
+            sid = n.get("student_id")
+            if sid:
+                btn_prof = QPushButton("👤 Student 360°", card)
+                btn_prof.setStyleSheet("background: #1B2030; color: #4D8DFF; font-size: 10px; padding: 3px 8px; border-radius: 4px;")
+                def make_open_profile(s_id=sid):
+                    def handler():
+                        from desktop.student_profile_dialog import StudentProfileDialog
+                        dlg = StudentProfileDialog(self.parent(), s_id)
+                        dlg.exec()
+                    return handler
+                btn_prof.clicked.connect(make_open_profile())
+                act_r.addWidget(btn_prof)
+
+                btn_iv = QPushButton("🛠️ Intervene", card)
+                btn_iv.setStyleSheet("background: #1B2030; color: #30C48D; font-size: 10px; padding: 3px 8px; border-radius: 4px;")
+                def make_open_iv():
+                    def handler():
+                        self.accept()
+                        if hasattr(self.parent(), "switch_to_frame"):
+                            self.parent().switch_to_frame("interventions")
+                    return handler
+                btn_iv.clicked.connect(make_open_iv())
+                act_r.addWidget(btn_iv)
+
+            act_r.addStretch(1)
+
+            if is_unread:
+                btn_read = QPushButton("✓ Mark Read", card)
+                btn_read.setStyleSheet("background: #151925; color: #8D96A8; font-size: 10px; padding: 3px 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;")
+                def make_mark_read(nid=n["notification_id"]):
+                    def handler():
+                        mark_notification_as_read(nid)
+                        if hasattr(self.parent(), "refresh_top_bar_counts"):
+                            self.parent().refresh_top_bar_counts()
+                        self.refresh_list()
+                    return handler
+                btn_read.clicked.connect(make_mark_read())
+                act_r.addWidget(btn_read)
+
+            c_layout.addLayout(act_r)
+            self.scroll_layout.addWidget(card)
+
+
+class MyProfileDialog(QDialog):
+
+    def __init__(self, parent, user):
+        super().__init__(parent)
+        self.setWindowTitle("My Profile Details")
+        self.setFixedSize(380, 220)
+        self.setStyleSheet(GLOBAL_STYLESHEET)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        title = QLabel("👤 MY ACCOUNT PROFILE", self)
+        title.setFont(QFont("Outfit", 14, QFont.Bold))
+        title.setStyleSheet("color: #FFFFFF;")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        info_widget = QWidget(self)
+        info_layout = QVBoxLayout(info_widget)
+        info_layout.setContentsMargins(0, 10, 0, 10)
+        
+        username_lbl = QLabel(f"Username:  @{user['username']}", info_widget)
+        username_lbl.setFont(QFont("Outfit", 12))
+        info_layout.addWidget(username_lbl)
+        
+        fullname_lbl = QLabel(f"Full Name:  {user['full_name']}", info_widget)
+        fullname_lbl.setFont(QFont("Outfit", 12))
+        info_layout.addWidget(fullname_lbl)
+        
+        role_lbl = QLabel(f"Access Role:  {user['role']}", info_widget)
+        role_lbl.setFont(QFont("Outfit", 12))
+        info_layout.addWidget(role_lbl)
+        
+        status_lbl = QLabel(f"Status:  ● {user['status']}", info_widget)
+        status_lbl.setFont(QFont("Outfit", 12, QFont.Bold))
+        status_lbl.setStyleSheet("color: #34A853;")
+        info_layout.addWidget(status_lbl)
+        
+        layout.addWidget(info_widget)
+        
+        close_btn = QPushButton("CLOSE", self)
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+
+
+class ChangePasswordDialog(QDialog):
+    def __init__(self, parent, user_id):
+        super().__init__(parent)
+        self.user_id = user_id
+        self.setWindowTitle("Change Password")
+        self.setFixedSize(400, 320)
+        self.setStyleSheet(GLOBAL_STYLESHEET)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30, 20, 30, 20)
+        
+        title = QLabel("🔒 UPDATE ACCOUNT PASSWORD", self)
+        title.setFont(QFont("Outfit", 14, QFont.Bold))
+        title.setStyleSheet("color: #FFFFFF;")
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        form = QWidget(self)
+        form_layout = QGridLayout(form)
+        form_layout.setContentsMargins(0, 10, 0, 10)
+        
+        old_lbl = QLabel("Current Password:", form)
+        old_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+        old_lbl.setStyleSheet("color: #AAAAAA;")
+        form_layout.addWidget(old_lbl, 0, 0)
+        
+        self.old_entry = QLineEdit(form)
+        self.old_entry.setEchoMode(QLineEdit.Password)
+        form_layout.addWidget(self.old_entry, 0, 1)
+        
+        new_lbl = QLabel("New Password:", form)
+        new_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+        new_lbl.setStyleSheet("color: #AAAAAA;")
+        form_layout.addWidget(new_lbl, 1, 0)
+        
+        self.new_entry = QLineEdit(form)
+        self.new_entry.setEchoMode(QLineEdit.Password)
+        form_layout.addWidget(self.new_entry, 1, 1)
+        
+        confirm_lbl = QLabel("Confirm Password:", form)
+        confirm_lbl.setFont(QFont("Outfit", 11, QFont.Bold))
+        confirm_lbl.setStyleSheet("color: #AAAAAA;")
+        form_layout.addWidget(confirm_lbl, 2, 0)
+        
+        self.confirm_entry = QLineEdit(form)
+        self.confirm_entry.setEchoMode(QLineEdit.Password)
+        form_layout.addWidget(self.confirm_entry, 2, 1)
+        
+        layout.addWidget(form)
+        
+        self.status_lbl = QLabel("", self)
+        self.status_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_lbl)
+        
+        btn_box = QHBoxLayout()
+        update_btn = QPushButton("UPDATE PASSWORD", self)
+        update_btn.setObjectName("PrimaryButton")
+        update_btn.clicked.connect(self.proceed)
+        btn_box.addWidget(update_btn)
+        
+        cancel_btn = QPushButton("CANCEL", self)
+        cancel_btn.clicked.connect(self.reject)
+        btn_box.addWidget(cancel_btn)
+        
+        layout.addLayout(btn_box)
+
+    def proceed(self):
+        old_val = self.old_entry.text()
+        new_val = self.new_entry.text()
+        conf_val = self.confirm_entry.text()
+
+        if not old_val or not new_val:
+            self.status_lbl.setText("Fields cannot remain empty.")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+            return
+        if new_val != conf_val:
+            self.status_lbl.setText("Passwords do not match.")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+            return
+        
+        from core.user_service import change_user_password
+        if change_user_password(self.user_id, old_val, new_val):
+            self.status_lbl.setText("Password updated successfully!")
+            self.status_lbl.setStyleSheet("color: #2ecc71;")
+            self.old_entry.setEnabled(False)
+            self.new_entry.setEnabled(False)
+            self.confirm_entry.setEnabled(False)
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(1500, self.accept)
+        else:
+            self.status_lbl.setText("Incorrect current password.")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+
+
+class WorkspaceWidget(QWidget):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        
+        # 1. Sidebar Frame
+        self.sidebar = QFrame(self)
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setFixedWidth(220)
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(15, 25, 15, 20)
+        sidebar_layout.setAlignment(Qt.AlignTop)
+        
+        brand_lbl = QLabel("PMLA-SCWE", self.sidebar)
+        brand_lbl.setFont(QFont("Outfit", 20, QFont.Bold))
+        brand_lbl.setStyleSheet(
+            "color: #F5F7FA; border: none;"
+            "font-weight: 800; letter-spacing: 0.5px;"
+        )
+        sidebar_layout.addWidget(brand_lbl)
+
+        v_lbl = QLabel("v1.1 — Premium Edition", self.sidebar)
+        v_lbl.setFont(QFont("Outfit", 10))
+        v_lbl.setStyleSheet("color: #4A5260; border: none;")
+        sidebar_layout.addWidget(v_lbl)
+        sidebar_layout.addSpacing(25)
+
+        # Thin separator
+        sep = QFrame(self.sidebar)
+        sep.setFixedHeight(1)
+        sep.setStyleSheet("background-color: rgba(255,255,255,0.05); border: none;")
+        sidebar_layout.addWidget(sep)
+        sidebar_layout.addSpacing(15)
+        
+        self.nav_buttons = {}
+
+        for title, name in NAV_ITEMS:
+            btn = QPushButton(title, self.sidebar)
+            btn.setObjectName("NavButton")
+            btn.setCursor(Qt.PointingHandCursor)
+
+            def make_switch(n=name):
+                return lambda: self.controller.switch_to_frame(n)
+
+            btn.clicked.connect(make_switch())
+            sidebar_layout.addWidget(btn)
+            self.nav_buttons[name] = btn
+            
+        sidebar_layout.addStretch(1)
+        
+        logout_btn = QPushButton("LOGOUT USER", self.sidebar)
+        logout_btn.setObjectName("NavButton")
+        logout_btn.setStyleSheet("color: #FF4D4D; border: 1px solid #3A1A1A; background-color: #181818; text-align: center;")
+        logout_btn.setCursor(Qt.PointingHandCursor)
+        logout_btn.clicked.connect(self.controller.perform_logout)
+        sidebar_layout.addWidget(logout_btn)
+
+        layout.addWidget(self.sidebar)
+
+        # 2. Right Pane: Header + Content Stack
+        self.right_pane = QWidget(self)
+        right_layout = QVBoxLayout(self.right_pane)
+        right_layout.setContentsMargins(20, 0, 20, 20)
+        right_layout.setSpacing(0)
+
+        # Top Bar Frame
+        self.top_bar = QFrame(self.right_pane)
+        self.top_bar.setObjectName("TopBar")
+        self.top_bar.setFixedHeight(56)
+        top_layout = QHBoxLayout(self.top_bar)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(10)
+
+        brand_text = QLabel("Student Analytics Command Center", self.top_bar)
+        brand_text.setFont(QFont("Outfit", 13, QFont.Bold))
+        brand_text.setStyleSheet("color: #4A5260; background: transparent;")
+        top_layout.addWidget(brand_text)
+
+        top_layout.addStretch(1)
+
+        # Notification Bell
+        self.bell_btn = QPushButton("🔔  0", self.top_bar)
+        self.bell_btn.setFont(QFont("Outfit", 11, QFont.Bold))
+        self.bell_btn.setStyleSheet(
+            "QPushButton { background-color: #151925; border: 1px solid rgba(255,255,255,0.08);"
+            " color: #8D96A8; border-radius: 6px; padding: 6px 12px; }"
+            "QPushButton:hover { background-color: #1B2030; color: #F5F7FA; }"
+        )
+        self.bell_btn.clicked.connect(self.controller.show_notifications_dialog)
+        top_layout.addWidget(self.bell_btn)
+
+        # Profile button
+        self.profile_btn = QPushButton("👤  Admin  ▾", self.top_bar)
+        self.profile_btn.setFont(QFont("Outfit", 11, QFont.Bold))
+        self.profile_btn.setStyleSheet(
+            "QPushButton { background-color: #151925; border: 1px solid rgba(255,255,255,0.08);"
+            " color: #F5F7FA; border-radius: 6px; padding: 6px 14px; }"
+            "QPushButton:hover { background-color: #1B2030; }"
+        )
+        self.profile_btn.clicked.connect(self.controller.show_profile_menu)
+        top_layout.addWidget(self.profile_btn)
+
+        right_layout.addWidget(self.top_bar)
+        
+        # Inner Content Stack
+        self.content_stack = QStackedWidget(self.right_pane)
+        right_layout.addWidget(self.content_stack)
+        
+        layout.addWidget(self.right_pane)
+
+
+class MainApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PMLA-SCWE - Student Analytics & Cyber-Wellbeing Engine")
+        self.resize(1100, 680)
+        self.setMinimumSize(1000, 600)
+        self.setStyleSheet(GLOBAL_STYLESHEET)
+        
+        self.current_user = None
+        self.target_student_id = None
+        
+        # Central Stacked Widget
+        self.central_stack = QStackedWidget(self)
+        self.setCentralWidget(self.central_stack)
+        
+        # Page Views mappings
+        self.views = {}
+        
+        # Setup Login View
+        self.login_view = LoginFrame(self.central_stack, controller=self, on_login_success=self.on_login_success)
+        self.central_stack.addWidget(self.login_view)
+        
+        # Setup Workspace View
+        self.workspace = WorkspaceWidget(self.central_stack, self)
+        self.central_stack.addWidget(self.workspace)
+        
+        self.show_login_screen()
+
+    def show_login_screen(self):
+        self.current_user = None
+        self.central_stack.setCurrentIndex(0)
+
+    def on_login_success(self):
+        self.workspace.content_stack.setEnabled(True)
+        
+        # Initialize views dynamic binding inside Workspace stacked widget
+        self.setup_pages()
+        
+        self.refresh_top_bar_counts()
+        self.central_stack.setCurrentIndex(1)
+        self.switch_to_frame("dashboard")
+
+    def setup_pages(self):
+        # Clear existing items if any
+        while self.workspace.content_stack.count() > 0:
+            w = self.workspace.content_stack.widget(0)
+            self.workspace.content_stack.removeWidget(w)
+            w.deleteLater()
+            
+        self.views.clear()
+        
+        pages_config = [
+            ("dashboard", DashboardFrame),
+            ("students", StudentsFrame),
+            ("attendance", AttendanceFrame),
+            ("assessments", AssessmentsFrame),
+            ("wellness", WellnessFrame),
+            ("analytics", AnalyticsViewFrame),
+            ("reports", ReportsFrame),
+            ("interventions", InterventionsFrame),
+            ("ai_assistant", AIAssistantFrame),
+            ("users", UsersFrame),
+        ]
+
+        
+        for name, view_class in pages_config:
+            view_instance = view_class(self.workspace.content_stack, self)
+            self.workspace.content_stack.addWidget(view_instance)
+            self.views[name] = view_instance
+
+    def refresh_top_bar_counts(self):
+        if not self.current_user:
+            return
+
+        try:
+            from core.notification_service import get_unread_notification_count
+            unread = get_unread_notification_count()
+            if unread > 0:
+                self.workspace.bell_btn.setText(f"🔔  {unread}")
+                self.workspace.bell_btn.setStyleSheet(
+                    "QPushButton { background-color: rgba(229,72,77,0.15);"
+                    " border: 1px solid rgba(229,72,77,0.35);"
+                    " color: #E5484D; border-radius: 6px; padding: 6px 12px; }"
+                    "QPushButton:hover { background-color: rgba(229,72,77,0.25); }"
+                )
+            else:
+                self.workspace.bell_btn.setText("🔔  0")
+                self.workspace.bell_btn.setStyleSheet(
+                    "QPushButton { background-color: #151925;"
+                    " border: 1px solid rgba(255,255,255,0.08);"
+                    " color: #8D96A8; border-radius: 6px; padding: 6px 12px; }"
+                    "QPushButton:hover { background-color: #1B2030; color: #F5F7FA; }"
+                )
+        except Exception:
+            pass
+
+        fname = self.current_user.get("full_name", "Admin")
+        role = self.current_user.get("role", "Teacher")
+        display = fname.split()[0] if fname else "Admin"
+        self.workspace.profile_btn.setText(f"👤  {display}  ▾")
+
+
+    def show_notifications_dialog(self):
+        dialog = NotificationsDialog(self)
+        dialog.exec()
+
+    def show_profile_menu(self):
+        menu = QMenu(self)
+        
+        action_profile = QAction("👤 My Profile", menu)
+        action_profile.triggered.connect(self.open_my_profile_dialog)
+        menu.addAction(action_profile)
+        
+        action_pwd = QAction("🔒 Change Password", menu)
+        action_pwd.triggered.connect(self.open_change_password_dialog)
+        menu.addAction(action_pwd)
+        
+        if self.current_user["role"] == "Admin":
+            action_users = QAction("👥 User Management", menu)
+            action_users.triggered.connect(lambda: self.switch_to_frame("users"))
+            menu.addAction(action_users)
+            
+        action_db = QAction("🗄 Database Status", menu)
+        action_db.triggered.connect(self.show_db_status)
+        menu.addAction(action_db)
+        
+        menu.addSeparator()
+        
+        action_logout = QAction("🚪 Logout Profile", menu)
+        action_logout.triggered.connect(self.perform_logout)
+        menu.addAction(action_logout)
+        
+        # Position menu at bottom of profile button
+        button_pos = self.workspace.profile_btn.mapToGlobal(QPoint(0, self.workspace.profile_btn.height()))
+        menu.exec(button_pos)
+
+    def open_my_profile_dialog(self):
+        dialog = MyProfileDialog(self, self.current_user)
+        dialog.exec()
+
+    def open_change_password_dialog(self):
+        dialog = ChangePasswordDialog(self, self.current_user["user_id"])
+        dialog.exec()
+
+    def show_db_status(self):
+        from core.database import get_db_status
+        status = get_db_status()
+        QMessageBox.information(
+            self, "Database Connection",
+            f"Backend: {status['backend']}\nDetails: {status['display']}"
+        )
+
+    def switch_to_frame(self, name: str):
+        if not self.workspace.nav_buttons:
+            return
+            
         if self.current_user and self.current_user.get("role") == "Viewer":
             if name not in ["dashboard", "reports", "analytics", "ai_assistant"]:
-                messagebox.showwarning(
-                    "Access Denied",
+                QMessageBox.warning(
+                    self, "Access Denied",
                     "Access Denied: Viewers are only authorized to read dashboard analytics and reports."
                 )
                 return
 
-        # Update button highlights
-        for tab_name, btn in self.nav_buttons.items():
+        # Update sidebar button active highlighting
+        for tab_name, btn in self.workspace.nav_buttons.items():
             if tab_name == name:
-                btn.configure(fg_color="#3A1616", text_color="#FF4D4D")
+                btn.setProperty("active", "true")
             else:
-                btn.configure(fg_color="transparent", text_color="#E5E5E5")
-
-        # Destroy old frame
-        if self.active_frame:
-            self.active_frame.destroy()
-
-        # Route and initialize views
-        if name == "dashboard":
-            self.active_frame = DashboardFrame(self.content_container, self)
-        elif name == "students":
-            self.active_frame = StudentsFrame(self.content_container, self)
-        elif name == "attendance":
-            self.active_frame = AttendanceFrame(self.content_container, self)
-        elif name == "assessments":
-            self.active_frame = AssessmentsFrame(self.content_container, self)
-        elif name == "wellness":
-            self.active_frame = WellnessFrame(self.content_container, self)
-        elif name == "analytics":
-            self.active_frame = AnalyticsViewFrame(self.content_container, self)
-        elif name == "reports":
-            self.active_frame = ReportsFrame(self.content_container, self)
-        elif name == "ai_assistant":
-            self.active_frame = AIAssistantFrame(self.content_container, self)
-        elif name == "users":
-            self.active_frame = UsersFrame(self.content_container, self)
-
-        # Active view gridded at row 1 (below top_bar at row 0)
-        self.active_frame.grid(row=1, column=0, sticky="nsew")
-        self.refresh_top_bar_counts()
+                btn.setProperty("active", "false")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+            
+        if name in self.views:
+            # Refresh details on view before showing it if has load hook
+            view_instance = self.views[name]
+            if hasattr(view_instance, "refresh_dashboard") and name == "dashboard":
+                view_instance.refresh_dashboard()
+            elif hasattr(view_instance, "load_students") and name == "students":
+                view_instance.load_students()
+            elif hasattr(view_instance, "load_class_roster") and name == "attendance":
+                view_instance.load_class_roster()
+            elif hasattr(view_instance, "update_db_status") and hasattr(view_instance, "load_student_assessment_history") and name == "assessments":
+                view_instance.load_student_assessment_history()
+            elif hasattr(view_instance, "update_db_status") and hasattr(view_instance, "load_student_wellness_history") and name == "wellness":
+                view_instance.load_student_wellness_history()
+            elif hasattr(view_instance, "refresh_report_data") and name == "reports":
+                view_instance.refresh_report_data()
+            elif hasattr(view_instance, "load_users") and name == "users":
+                view_instance.load_users()
+                
+            self.workspace.content_stack.setCurrentWidget(view_instance)
+            self.refresh_top_bar_counts()
 
     def perform_logout(self):
-        self.current_user = None
         self.show_login_screen()
 
 
 def run():
-    app = MainApp()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    window = MainApp()
+    window.show()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

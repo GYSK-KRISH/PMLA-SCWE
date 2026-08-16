@@ -12,6 +12,10 @@ SpeechRecognition
 pyttsx3
 
 # Graphical User Interfaces
-customtkinter
+PySide6
 Flask
 python-dotenv
+
+# Document & Report Generation
+reportlab
+

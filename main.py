@@ -60,7 +60,7 @@ def main():
         from web.app import run_web_server
         run_web_server()
     else:
-        print("\n=== Launching CustomTkinter Desktop Client ===")
+        print("\n=== Launching PySide6 Desktop Client ===")
         # Dynamic import of desktop app
         from desktop.app import run
         run()

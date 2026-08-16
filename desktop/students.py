@@ -1,136 +1,330 @@
-"""CustomTkinter panel for student registration, search, and CRUD administration."""
+"""PySide6 panel for student registration, search, and CRUD administration."""
 
 from __future__ import annotations
-import tkinter as tk
-import customtkinter as ctk
+import datetime
+from PySide6.QtWidgets import (
+    QWidget, QFrame, QLabel, QPushButton, QLineEdit, QVBoxLayout,
+    QHBoxLayout, QGridLayout, QScrollArea, QDialog, QMessageBox, QComboBox
+)
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont
 
 from core import student_service
+from .student_profile_dialog import StudentProfileDialog
 
 
-class StudentsFrame(ctk.CTkFrame):
+class StudentRowWidget(QFrame):
+    def __init__(self, parent, student, edit_cmd, delete_cmd, profile_cmd):
+        super().__init__(parent)
+        self.setObjectName("InnerCardFrame")
+        self.setFixedHeight(48)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(15, 0, 15, 0)
+        
+        sid = student["student_id"]
+        name = f"{student['first_name']} {student['last_name']}"
+        class_sec = student["class_section"]
+        email = student["email"] or "N/A"
+        phone = student["phone"] or "N/A"
+        
+        sid_lbl = QLabel(str(sid), self)
+        sid_lbl.setFixedWidth(50)
+        layout.addWidget(sid_lbl)
+        
+        name_lbl = QLabel(name, self)
+        name_lbl.setStyleSheet("font-weight: bold; color: #F5F7FA; background: transparent; border: none;")
+        layout.addWidget(name_lbl)
+        
+        class_lbl = QLabel(class_sec, self)
+        class_lbl.setStyleSheet("background: transparent; border: none;")
+        layout.addWidget(class_lbl)
+        
+        email_lbl = QLabel(email, self)
+        email_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        layout.addWidget(email_lbl)
+        
+        phone_lbl = QLabel(phone, self)
+        phone_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        layout.addWidget(phone_lbl)
+        
+        # Actions Sub-widget
+        actions_widget = QWidget(self)
+        actions_layout = QHBoxLayout(actions_widget)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(6)
+        
+        profile_btn = QPushButton("360° Profile", actions_widget)
+        profile_btn.setStyleSheet(
+            "QPushButton { background-color: rgba(124, 92, 255, 0.15); color: #A084FF;"
+            " border: 1px solid rgba(124, 92, 255, 0.35); border-radius: 6px; font-weight: bold; padding: 3px 8px; font-size: 11px; }"
+            "QPushButton:hover { background-color: rgba(124, 92, 255, 0.30); color: #C0AAFF; }"
+        )
+        profile_btn.setCursor(Qt.PointingHandCursor)
+        profile_btn.clicked.connect(lambda: profile_cmd(sid))
+        actions_layout.addWidget(profile_btn)
+
+        edit_btn = QPushButton("Edit", actions_widget)
+        edit_btn.setFixedSize(50, 26)
+        edit_btn.clicked.connect(lambda: edit_cmd(student))
+        actions_layout.addWidget(edit_btn)
+        
+        delete_btn = QPushButton("Delete", actions_widget)
+        delete_btn.setStyleSheet("color: #E5484D; border: 1px solid rgba(229, 72, 77, 0.25); background-color: rgba(229, 72, 77, 0.08);")
+        delete_btn.setFixedSize(55, 26)
+        delete_btn.clicked.connect(lambda: delete_cmd(sid))
+        actions_layout.addWidget(delete_btn)
+        
+        layout.addWidget(actions_widget)
+
+
+
+class StudentFormDialog(QDialog):
+    def __init__(self, parent, student_data=None):
+        super().__init__(parent)
+        self.student_data = student_data
+        self.is_edit = student_data is not None
+        self.setWindowTitle("Edit Student Profile" if self.is_edit else "Register New Student")
+        self.setFixedSize(450, 480)
+        self.setStyleSheet(parent.styleSheet())
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30, 20, 30, 20)
+        
+        title_lbl = QLabel(self.windowTitle().upper(), self)
+        title_lbl.setFont(QFont("Outfit", 18, QFont.Bold))
+        title_lbl.setStyleSheet("color: #F5F7FA;")
+        title_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title_lbl)
+        
+        form = QWidget(self)
+        form_layout = QGridLayout(form)
+        form_layout.setContentsMargins(0, 10, 0, 10)
+        
+        # Inputs mapping
+        self.inputs = {}
+        
+        # 1. First Name
+        form_layout.addWidget(QLabel("First Name*:", form), 0, 0)
+        self.inputs["first_name"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["first_name"], 0, 1)
+        
+        # 2. Last Name
+        form_layout.addWidget(QLabel("Last Name*:", form), 1, 0)
+        self.inputs["last_name"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["last_name"], 1, 1)
+        
+        # 3. Class Section
+        form_layout.addWidget(QLabel("Class/Section* (e.g. XII-A):", form), 2, 0)
+        self.inputs["class_section"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["class_section"], 2, 1)
+        
+        # 4. DOB
+        form_layout.addWidget(QLabel("Date of Birth (YYYY-MM-DD):", form), 3, 0)
+        self.inputs["dob"] = QLineEdit(form)
+        self.inputs["dob"].setPlaceholderText("YYYY-MM-DD")
+        form_layout.addWidget(self.inputs["dob"], 3, 1)
+        
+        # 5. Gender
+        form_layout.addWidget(QLabel("Gender (M/F/O):", form), 4, 0)
+        self.gender_combo = QComboBox(form)
+        self.gender_combo.addItems(["M", "F", "O"])
+        self.gender_combo.setCurrentText("O")
+        form_layout.addWidget(self.gender_combo, 4, 1)
+        
+        # 6. Email
+        form_layout.addWidget(QLabel("Email Address:", form), 5, 0)
+        self.inputs["email"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["email"], 5, 1)
+        
+        # 7. Phone
+        form_layout.addWidget(QLabel("Phone Number:", form), 6, 0)
+        self.inputs["phone"] = QLineEdit(form)
+        form_layout.addWidget(self.inputs["phone"], 6, 1)
+        
+        layout.addWidget(form)
+        
+        # Status Label
+        self.status_lbl = QLabel("", self)
+        self.status_lbl.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_lbl)
+        
+        # Buttons
+        btn_box = QHBoxLayout()
+        save_btn = QPushButton("SAVE PROFILE", self)
+        save_btn.setObjectName("PrimaryButton")
+        save_btn.clicked.connect(self.save)
+        btn_box.addWidget(save_btn)
+        
+        cancel_btn = QPushButton("CANCEL", self)
+        cancel_btn.clicked.connect(self.reject)
+        btn_box.addWidget(cancel_btn)
+        
+        layout.addLayout(btn_box)
+        
+        if self.is_edit:
+            self.load_student_data()
+
+    def load_student_data(self):
+        sd = self.student_data
+        self.inputs["first_name"].setText(sd["first_name"])
+        self.inputs["last_name"].setText(sd["last_name"])
+        self.inputs["class_section"].setText(sd["class_section"])
+        if sd.get("dob"):
+            self.inputs["dob"].setText(str(sd["dob"]))
+        self.gender_combo.setCurrentText(sd.get("gender", "O"))
+        if sd.get("email"):
+            self.inputs["email"].setText(sd["email"])
+        if sd.get("phone"):
+            self.inputs["phone"].setText(sd["phone"])
+
+    def save(self):
+        first = self.inputs["first_name"].text().strip()
+        last = self.inputs["last_name"].text().strip()
+        cls = self.inputs["class_section"].text().strip()
+        dob_val = self.inputs["dob"].text().strip() or None
+        gender_val = self.gender_combo.currentText()
+        email_val = self.inputs["email"].text().strip() or None
+        phone_val = self.inputs["phone"].text().strip() or None
+
+        if not first or not last or not cls:
+            self.status_lbl.setText("First, Last Name and Class are mandatory.")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+            self.inputs["first_name"].setFocus()
+            return
+
+        if dob_val:
+            try:
+                datetime.datetime.strptime(dob_val, "%Y-%m-%d")
+            except ValueError:
+                self.status_lbl.setText("Invalid date format. Use YYYY-MM-DD.")
+                self.status_lbl.setStyleSheet("color: #e74c3c;")
+                self.inputs["dob"].setFocus()
+                return
+
+        payload = {
+            "first_name": first,
+            "last_name": last,
+            "class_section": cls,
+            "dob": dob_val,
+            "gender": gender_val,
+            "email": email_val,
+            "phone": phone_val,
+        }
+
+        try:
+            if self.is_edit:
+                sid = self.student_data["student_id"]
+                if student_service.update_student(sid, payload):
+                    self.status_lbl.setText("Student profile updated successfully!")
+                    self.status_lbl.setStyleSheet("color: #2ecc71;")
+                    QTimer.singleShot(1000, self.accept)
+                else:
+                    self.status_lbl.setText("Failed to update database record.")
+                    self.status_lbl.setStyleSheet("color: #e74c3c;")
+            else:
+                if student_service.add_student(payload):
+                    self.status_lbl.setText("Student registered successfully!")
+                    self.status_lbl.setStyleSheet("color: #2ecc71;")
+                    QTimer.singleShot(1000, self.accept)
+                else:
+                    self.status_lbl.setText("Failed to insert database record.")
+                    self.status_lbl.setStyleSheet("color: #e74c3c;")
+        except Exception as e:
+            self.status_lbl.setText(f"Error: {e}")
+            self.status_lbl.setStyleSheet("color: #e74c3c;")
+
+
+class StudentsFrame(QWidget):
     def __init__(self, parent, controller):
-        super().__init__(parent, fg_color="transparent")
+        super().__init__(parent)
         self.controller = controller
 
-        # Grid configuration
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(2, weight=1)
+        # Main Layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
 
         # Header Section
-        header_frame = ctk.CTkFrame(self, fg_color="#0F0F0F", border_color="#2A2A2A", border_width=1, corner_radius=12, height=80)
-        header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
-        header_frame.grid_columnconfigure(0, weight=1)
-
-        title = ctk.CTkLabel(
-            header_frame,
-            text="STUDENT DIRECTORY",
-            font=ctk.CTkFont(family="Outfit", size=24, weight="bold"),
-            text_color="#FFFFFF"
-        )
-        title.grid(row=0, column=0, sticky="w", padx=20, pady=10)
+        header_frame = QFrame(self)
+        header_frame.setObjectName("CardFrame")
+        header_frame.setFixedHeight(60)
+        h_layout = QHBoxLayout(header_frame)
+        h_layout.setContentsMargins(20, 0, 20, 0)
+        
+        title = QLabel("STUDENT DIRECTORY", header_frame)
+        title.setFont(QFont("Outfit", 20, QFont.Bold))
+        title.setStyleSheet("color: #F5F7FA; background: transparent; border: none;")
+        h_layout.addWidget(title)
+        
+        layout.addWidget(header_frame)
 
         # Controls & Search Panel
-        search_frame = ctk.CTkFrame(self, fg_color="#1A1A1A", border_color="#2A2A2A", border_width=1, corner_radius=12)
-        search_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
+        search_frame = QFrame(self)
+        search_frame.setObjectName("CardFrame")
+        sf_layout = QHBoxLayout(search_frame)
+        sf_layout.setContentsMargins(20, 10, 20, 10)
+        
+        add_btn = QPushButton("+ REGISTER NEW STUDENT", search_frame)
+        add_btn.setObjectName("PrimaryButton")
+        add_btn.setFont(QFont("Outfit", 12, QFont.Bold))
+        add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.clicked.connect(self.open_add_student_dialog)
+        sf_layout.addWidget(add_btn)
+        
+        sf_layout.addStretch(1)
+        
+        search_lbl = QLabel("Search:", search_frame)
+        search_lbl.setFont(QFont("Outfit", 13, QFont.Bold))
+        search_lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+        sf_layout.addWidget(search_lbl)
 
-        # Add Student Button
-        add_btn = ctk.CTkButton(
-            search_frame,
-            text="+ REGISTER NEW STUDENT",
-            command=self.open_add_student_dialog,
-            fg_color="#E50914",
-            hover_color="#CC0000",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold")
-        )
-        add_btn.grid(row=0, column=0, padx=20, pady=15, sticky="w")
+        self.search_entry = QLineEdit(search_frame)
+        self.search_entry.setPlaceholderText("Enter Name, Class or ID...")
+        self.search_entry.setFixedWidth(220)
+        self.search_entry.returnPressed.connect(self.perform_search)
+        sf_layout.addWidget(self.search_entry)
 
-        # Search inputs
-        search_lbl = ctk.CTkLabel(
-            search_frame,
-            text="Search:",
-            font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            text_color="#AAAAAA"
-        )
-        search_lbl.grid(row=0, column=1, padx=(30, 5), pady=15, sticky="e")
+        search_action_btn = QPushButton("Search", search_frame)
+        search_action_btn.setFont(QFont("Outfit", 12, QFont.Bold))
+        search_action_btn.setCursor(Qt.PointingHandCursor)
+        search_action_btn.clicked.connect(self.perform_search)
+        sf_layout.addWidget(search_action_btn)
 
-        self.search_entry = ctk.CTkEntry(
-            search_frame,
-            placeholder_text="Enter Name, Class or ID...",
-            width=250,
-            fg_color="#181818",
-            border_color="#303030",
-            focused_border_color="#FF0000",
-            placeholder_text_color="#717171",
-            text_color="#FFFFFF",
-            font=ctk.CTkFont(family="Outfit", size=13)
-        )
-        self.search_entry.grid(row=0, column=2, padx=10, pady=15, sticky="w")
-        self.search_entry.bind("<Return>", lambda e: self.perform_search())
+        clear_action_btn = QPushButton("Clear", search_frame)
+        clear_action_btn.setCursor(Qt.PointingHandCursor)
+        clear_action_btn.clicked.connect(self.clear_search)
+        sf_layout.addWidget(clear_action_btn)
 
-        search_action_btn = ctk.CTkButton(
-            search_frame,
-            text="Search",
-            command=self.perform_search,
-            width=100,
-            fg_color="#272727",
-            hover_color="#333333",
-            text_color="#FFFFFF",
-            border_width=1,
-            border_color="#3A3A3A",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold")
-        )
-        search_action_btn.grid(row=0, column=3, padx=10, pady=15, sticky="w")
+        layout.addWidget(search_frame)
 
-        clear_action_btn = ctk.CTkButton(
-            search_frame,
-            text="Clear",
-            command=self.clear_search,
-            width=80,
-            fg_color="#272727",
-            hover_color="#333333",
-            text_color="#FFFFFF",
-            border_width=1,
-            border_color="#3A3A3A",
-            font=ctk.CTkFont(family="Outfit", size=13)
-        )
-        clear_action_btn.grid(row=0, column=4, padx=(0, 20), pady=15, sticky="w")
-
-        # Table Display ScrollFrame
-        self.table_scroll = ctk.CTkScrollableFrame(
-            self,
-            fg_color="#1A1A1A",
-            border_color="#2A2A2A",
-            border_width=1,
-            corner_radius=12,
-            label_text="REGISTERED STUDENTS LIST",
-            label_font=ctk.CTkFont(family="Outfit", size=14, weight="bold"),
-            label_text_color="#FFFFFF"
-        )
-        self.table_scroll.grid(row=2, column=0, sticky="nsew", padx=20, pady=10)
-        self.table_scroll.grid_columnconfigure(0, weight=1)  # ID
-        self.table_scroll.grid_columnconfigure(1, weight=3)  # Name
-        self.table_scroll.grid_columnconfigure(2, weight=2)  # Class
-        self.table_scroll.grid_columnconfigure(3, weight=3)  # Email
-        self.table_scroll.grid_columnconfigure(4, weight=2)  # Phone
-        self.table_scroll.grid_columnconfigure(5, weight=2)  # Actions
+        # Scroll Roster Area
+        self.roster_scroll = QScrollArea(self)
+        self.roster_scroll.setObjectName("CardFrame")
+        self.roster_scroll.setWidgetResizable(True)
+        self.roster_content = QWidget()
+        self.roster_layout = QVBoxLayout(self.roster_content)
+        self.roster_layout.setContentsMargins(15, 15, 15, 15)
+        self.roster_layout.setSpacing(6)
+        self.roster_layout.setAlignment(Qt.AlignTop)
+        self.roster_scroll.setWidget(self.roster_content)
+        layout.addWidget(self.roster_scroll, 1)
 
         # Status Message Box
-        self.status_msg = ctk.CTkLabel(
-            self,
-            text="",
-            font=ctk.CTkFont(family="Outfit", size=13),
-            text_color="#34A853"
-        )
-        self.status_msg.grid(row=3, column=0, sticky="ew", padx=20, pady=(0, 15))
+        self.status_msg = QLabel("", self)
+        self.status_msg.setFont(QFont("Outfit", 13))
+        self.status_msg.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.status_msg)
 
         # Initial Load
         self.load_students()
 
     def load_students(self, query: str | None = None):
-        # Clear existing roster rows
-        for widget in self.table_scroll.winfo_children():
-            widget.destroy()
+        # Clear existing roster entries
+        while self.roster_layout.count() > 0:
+            item = self.roster_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
         if query:
             students = student_service.search_students(query)
@@ -138,87 +332,46 @@ class StudentsFrame(ctk.CTkFrame):
             students = student_service.get_all_students()
 
         if not students:
-            no_lbl = ctk.CTkLabel(
-                self.table_scroll,
-                text="No student records found.",
-                font=ctk.CTkFont(family="Outfit", size=14),
-                text_color="#95a5a6"
-            )
-            no_lbl.grid(row=0, column=0, columnspan=6, pady=40)
+            no_lbl = QLabel("No student records found.", self.roster_content)
+            no_lbl.setStyleSheet("color: #95a5a6; font-size: 14px;")
+            no_lbl.setAlignment(Qt.AlignCenter)
+            self.roster_layout.addWidget(no_lbl)
             return
 
-        # Headers
-        headers = ["ID", "Student Name", "Class/Section", "Email Address", "Phone Number", "Manage Actions"]
-        for col_idx, header in enumerate(headers):
-            lbl = ctk.CTkLabel(
-                self.table_scroll,
-                text=header,
-                font=ctk.CTkFont(family="Outfit", size=12, weight="bold"),
-                text_color="#AAAAAA"
+        # Headers widget
+        headers_widget = QWidget(self.roster_content)
+        headers_layout = QHBoxLayout(headers_widget)
+        headers_layout.setContentsMargins(15, 5, 15, 5)
+        
+        lbls = [("ID", 50), ("Student Name", 3), ("Class/Section", 2), ("Email Address", 3), ("Phone Number", 2), ("Manage Actions", 2)]
+        for text, stretch in lbls:
+            lbl = QLabel(text, headers_widget)
+            lbl.setFont(QFont("Outfit", 12, QFont.Bold))
+            lbl.setStyleSheet("color: #8D96A8; background: transparent; border: none;")
+            if text == "ID":
+                lbl.setFixedWidth(stretch)
+                headers_layout.addWidget(lbl)
+            else:
+                headers_layout.addWidget(lbl, stretch)
+        self.roster_layout.addWidget(headers_widget)
+
+        # Populate student rows
+        for s in students:
+            row = StudentRowWidget(
+                self.roster_content, s,
+                self.open_edit_student_dialog,
+                self.confirm_delete_student,
+                self.open_student_profile
             )
-            sticky_val = "w" if col_idx < 5 else ""
-            lbl.grid(row=0, column=col_idx, sticky=sticky_val, padx=15, pady=(5, 10))
+            self.roster_layout.addWidget(row)
 
-        # Rows
-        for row_idx, student in enumerate(students, start=1):
-            sid = student["student_id"]
-            name = f"{student['first_name']} {student['last_name']}"
-            class_sec = student["class_section"]
-            email = student["email"] or "N/A"
-            phone = student["phone"] or "N/A"
-
-            row_bg = "#1A1A1A" if row_idx % 2 == 0 else "#181818"
-            row_frame = ctk.CTkFrame(self.table_scroll, fg_color=row_bg, height=45, corner_radius=6)
-            row_frame.grid(row=row_idx, column=0, columnspan=6, sticky="ew", pady=3, ipady=4)
-            row_frame.grid_columnconfigure(0, weight=1)
-            row_frame.grid_columnconfigure(1, weight=3)
-            row_frame.grid_columnconfigure(2, weight=2)
-            row_frame.grid_columnconfigure(3, weight=3)
-            row_frame.grid_columnconfigure(4, weight=2)
-            row_frame.grid_columnconfigure(5, weight=2)
-
-            ctk.CTkLabel(row_frame, text=str(sid), font=ctk.CTkFont(family="Outfit", size=13), text_color="#FFFFFF").grid(row=0, column=0, sticky="w", padx=15)
-            ctk.CTkLabel(row_frame, text=name, font=ctk.CTkFont(family="Outfit", size=13, weight="bold"), text_color="#FFFFFF").grid(row=0, column=1, sticky="w", padx=15)
-            ctk.CTkLabel(row_frame, text=class_sec, font=ctk.CTkFont(family="Outfit", size=13), text_color="#FFFFFF").grid(row=0, column=2, sticky="w", padx=15)
-            ctk.CTkLabel(row_frame, text=email, font=ctk.CTkFont(family="Outfit", size=12), text_color="#AAAAAA").grid(row=0, column=3, sticky="w", padx=15)
-            ctk.CTkLabel(row_frame, text=phone, font=ctk.CTkFont(family="Outfit", size=12), text_color="#AAAAAA").grid(row=0, column=4, sticky="w", padx=15)
-
-            # Action buttons
-            actions_sub_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
-            actions_sub_frame.grid(row=0, column=5, padx=10)
-
-            edit_btn = ctk.CTkButton(
-                actions_sub_frame,
-                text="Edit",
-                command=lambda s=student: self.open_edit_student_dialog(s),
-                width=55,
-                height=24,
-                fg_color="#272727",
-                hover_color="#333333",
-                text_color="#FFFFFF",
-                border_width=1,
-                border_color="#3A3A3A",
-                font=ctk.CTkFont(family="Outfit", size=11)
-            )
-            edit_btn.pack(side="left", padx=3)
-
-            delete_btn = ctk.CTkButton(
-                actions_sub_frame,
-                text="Delete",
-                command=lambda id=sid: self.confirm_delete_student(id),
-                width=60,
-                height=24,
-                fg_color="#181818",
-                border_color="#3A1A1A",
-                border_width=1,
-                hover_color="#3A1616",
-                text_color="#FF4D4D",
-                font=ctk.CTkFont(family="Outfit", size=11)
-            )
-            delete_btn.pack(side="left", padx=3)
+    def open_student_profile(self, student_id: int):
+        """Open the complete 360° intelligence profile modal for this student."""
+        dialog = StudentProfileDialog(self, student_id)
+        dialog.exec()
 
     def perform_search(self):
-        q = self.search_entry.get().strip()
+        q = self.search_entry.text().strip()
         if not q:
             self.load_students()
             return
@@ -226,41 +379,23 @@ class StudentsFrame(ctk.CTkFrame):
         self.show_status(f"Search results loaded for '{q}'.")
 
     def clear_search(self):
-        self.search_entry.delete(0, "end")
+        self.search_entry.clear()
         self.load_students()
         self.show_status("Cleared search query.")
 
     def show_status(self, text: str, is_error: bool = False):
         color = "#e74c3c" if is_error else "#2ecc71"
-        self.status_msg.configure(text=text, text_color=color)
-        self.after(4000, lambda: self.status_msg.configure(text=""))
+        self.status_msg.setText(text)
+        self.status_msg.setStyleSheet(f"color: {color};")
+        QTimer.singleShot(4000, lambda: self.status_msg.clear())
 
     def confirm_delete_student(self, student_id: int):
-        # CTk Confirmation Box Toplevel
-        confirm_win = ctk.CTkToplevel(self)
-        confirm_win.title("Delete Student Confirmation")
-        confirm_win.geometry("380x180")
-        confirm_win.resizable(False, False)
-        confirm_win.transient(self.winfo_toplevel())
-        confirm_win.grab_set()
-
-        # Center Window
-        x = self.winfo_toplevel().winfo_x() + (self.winfo_toplevel().winfo_width() // 2) - 190
-        y = self.winfo_toplevel().winfo_y() + (self.winfo_toplevel().winfo_height() // 2) - 90
-        confirm_win.geometry(f"+{x}+{y}")
-
-        label = ctk.CTkLabel(
-            confirm_win,
-            text=f"Are you sure you want to permanently delete\nStudent ID {student_id}?\n\nThis will remove all associated logs and audits.",
-            font=ctk.CTkFont(family="Outfit", size=13),
-            text_color="#e0e0e0"
+        reply = QMessageBox.question(
+            self, "Delete Student Confirmation",
+            f"Are you sure you want to permanently delete Student ID {student_id}?\n\nThis will remove all associated logs and audits.",
+            QMessageBox.Yes | QMessageBox.No
         )
-        label.pack(pady=20)
-
-        btn_frame = ctk.CTkFrame(confirm_win, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=20)
-
-        def proceed():
+        if reply == QMessageBox.Yes:
             try:
                 if student_service.delete_student(student_id):
                     self.show_status(f"Successfully deleted student ID {student_id}.")
@@ -269,173 +404,14 @@ class StudentsFrame(ctk.CTkFrame):
                     self.show_status("Failed to delete student.", is_error=True)
             except Exception as e:
                 self.show_status(f"Database error: {e}", is_error=True)
-            confirm_win.destroy()
-
-        yes_btn = ctk.CTkButton(btn_frame, text="DELETE", fg_color="#E50914", hover_color="#CC0000", command=proceed, width=100)
-        yes_btn.pack(side="left", expand=True, padx=10)
-
-        no_btn = ctk.CTkButton(btn_frame, text="CANCEL", fg_color="#272727", hover_color="#333333", text_color="#FFFFFF", command=confirm_win.destroy, width=100)
-        no_btn.pack(side="right", expand=True, padx=10)
 
     def open_add_student_dialog(self):
-        self.open_student_form_dialog()
+        dialog = StudentFormDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            self.load_students()
 
     def open_edit_student_dialog(self, student: dict):
-        self.open_student_form_dialog(student)
+        dialog = StudentFormDialog(self, student)
+        if dialog.exec() == QDialog.Accepted:
+            self.load_students()
 
-    def open_student_form_dialog(self, student_data: dict | None = None):
-        form_win = ctk.CTkToplevel(self)
-        form_win.configure(fg_color="#181818")
-        is_edit = student_data is not None
-        title = "Edit Student Profile" if is_edit else "Register New Student"
-        form_win.title(title)
-        form_win.geometry("450x520")
-        form_win.resizable(False, False)
-        form_win.transient(self.winfo_toplevel())
-        form_win.grab_set()
-
-        # Center Window
-        x = self.winfo_toplevel().winfo_x() + (self.winfo_toplevel().winfo_width() // 2) - 225
-        y = self.winfo_toplevel().winfo_y() + (self.winfo_toplevel().winfo_height() // 2) - 260
-        form_win.geometry(f"+{x}+{y}")
-
-        title_lbl = ctk.CTkLabel(
-            form_win,
-            text=title.upper(),
-            font=ctk.CTkFont(family="Outfit", size=18, weight="bold"),
-            text_color="#FFFFFF"
-        )
-        title_lbl.pack(pady=15)
-
-        # Form Inputs Scroll Frame
-        form_frame = ctk.CTkFrame(form_win, fg_color="transparent")
-        form_frame.pack(fill="both", expand=True, padx=30)
-
-        # Fields
-        labels_fields = [
-            ("First Name*:", "first_name", "entry"),
-            ("Last Name*:", "last_name", "entry"),
-            ("Class/Section* (e.g. XII-A):", "class_section", "entry"),
-            ("Date of Birth (YYYY-MM-DD):", "dob", "entry"),
-            ("Gender (M/F/O):", "gender", "option"),
-            ("Email Address:", "email", "entry"),
-            ("Phone Number:", "phone", "entry"),
-        ]
-
-        widgets = {}
-        for row, (label_text, field_name, w_type) in enumerate(labels_fields):
-            lbl = ctk.CTkLabel(
-                form_frame,
-                text=label_text,
-                font=ctk.CTkFont(family="Outfit", size=12, weight="bold"),
-                text_color="#AAAAAA"
-            )
-            lbl.grid(row=row, column=0, sticky="w", pady=6)
-
-            if w_type == "entry":
-                entry = ctk.CTkEntry(
-                    form_frame, 
-                    width=220, 
-                    fg_color="#1A1A1A", 
-                    border_color="#303030", 
-                    focused_border_color="#FF0000",
-                    placeholder_text_color="#717171",
-                    text_color="#FFFFFF",
-                    font=ctk.CTkFont(family="Outfit", size=12)
-                )
-                entry.grid(row=row, column=1, sticky="e", pady=6)
-                if is_edit and student_data.get(field_name):
-                    entry.insert(0, str(student_data[field_name]))
-                widgets[field_name] = entry
-            elif w_type == "option":
-                var = tk.StringVar(value=student_data.get("gender", "O") if is_edit else "O")
-                opt = ctk.CTkOptionMenu(
-                    form_frame, 
-                    values=["M", "F", "O"], 
-                    variable=var, 
-                    width=120, 
-                    fg_color="#1A1A1A", 
-                    button_color="#E50914", 
-                    button_hover_color="#CC0000",
-                    dropdown_fg_color="#181818", 
-                    dropdown_text_color="#FFFFFF",
-                    text_color="#FFFFFF"
-                )
-                opt.grid(row=row, column=1, sticky="w", pady=6)
-                widgets[field_name] = var
-
-        # Action Buttons
-        btn_frame = ctk.CTkFrame(form_win, fg_color="transparent")
-        btn_frame.pack(fill="x", side="bottom", pady=20, padx=30)
-
-        def save():
-            first = widgets["first_name"].get().strip()
-            last = widgets["last_name"].get().strip()
-            cls = widgets["class_section"].get().strip()
-            dob_val = widgets["dob"].get().strip() or None
-            gender_val = widgets["gender"].get()
-            email_val = widgets["email"].get().strip() or None
-            phone_val = widgets["phone"].get().strip() or None
-
-            if not first or not last or not cls:
-                widgets["first_name"].focus()
-                # Simple color feedback or window title alert
-                return
-
-            import datetime
-            if dob_val:
-                try:
-                    datetime.datetime.strptime(dob_val, "%Y-%m-%d")
-                except ValueError:
-                    widgets["dob"].configure(border_color="#FF0000")
-                    return
-
-            payload = {
-                "first_name": first,
-                "last_name": last,
-                "class_section": cls,
-                "dob": dob_val,
-                "gender": gender_val,
-                "email": email_val,
-                "phone": phone_val,
-            }
-
-            try:
-                if is_edit:
-                    ok = student_service.update_student(student_data["student_id"], payload)
-                    msg = "Student updated successfully."
-                else:
-                    ok = student_service.add_student(payload)
-                    msg = "Student registered successfully."
-
-                if ok:
-                    from core.database import log_activity
-                    log_activity(f"Student {first} {last} registered" if not is_edit else f"Student ID {student_data['student_id']} profile updated")
-                    self.show_status(msg)
-                    self.load_students()
-                    form_win.destroy()
-                else:
-                    self.show_status("Operation failed. Try again.", is_error=True)
-            except Exception as e:
-                self.show_status(f"Error saving profile: {e}", is_error=True)
-
-        save_btn = ctk.CTkButton(
-            btn_frame,
-            text="SAVE CHANGES" if is_edit else "REGISTER STUDENT",
-            fg_color="#E50914",
-            hover_color="#CC0000",
-            text_color="#ffffff",
-            font=ctk.CTkFont(family="Outfit", size=13, weight="bold"),
-            command=save
-        )
-        save_btn.pack(side="left", expand=True, padx=5)
-
-        cancel_btn = ctk.CTkButton(
-            btn_frame,
-            text="CANCEL",
-            fg_color="#272727",
-            hover_color="#333333",
-            text_color="#ffffff",
-            command=form_win.destroy
-        )
-        cancel_btn.pack(side="right", expand=True, padx=5)

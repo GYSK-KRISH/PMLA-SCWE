@@ -232,6 +232,7 @@ def initialize_database(schema_path: str | None = None) -> bool:
                 except Exception:
                     continue
             conn.commit()
+            _run_migrations(conn)
             cursor.close()
             conn.close()
             return True
@@ -244,11 +245,43 @@ def initialize_database(schema_path: str | None = None) -> bool:
         cursor = conn.cursor()
         cursor.executescript(_sqlite_schema())
         conn.commit()
+        _run_migrations(conn)
         cursor.close()
         conn.close()
         return True
     except Exception:
         return False
+
+
+def _run_migrations(conn) -> None:
+    """Safely adds newly introduced columns and tables to existing databases without data loss."""
+    cols_to_add = [
+        ("Notifications", "student_id", "INT", "INTEGER"),
+        ("Notifications", "alert_type", "VARCHAR(50) DEFAULT 'SYSTEM'", "TEXT DEFAULT 'SYSTEM'"),
+        ("Notifications", "source", "VARCHAR(50) DEFAULT 'Analytics Engine'", "TEXT DEFAULT 'Analytics Engine'"),
+        ("Notifications", "dedup_key", "VARCHAR(150)", "TEXT"),
+        ("Notifications", "action_status", "VARCHAR(30) DEFAULT 'OPEN'", "TEXT DEFAULT 'OPEN'"),
+        # Version 2.0 Phase 1: Multi-School Tenancy & User Context
+        ("Students", "school_id", "INT", "INTEGER"),
+        ("Users", "organization_id", "INT", "INTEGER"),
+        ("Users", "school_id", "INT", "INTEGER"),
+        ("Users", "is_active", "INT DEFAULT 1", "INTEGER DEFAULT 1"),
+        ("Users", "updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP", "TEXT DEFAULT CURRENT_TIMESTAMP"),
+    ]
+    cursor = conn.cursor()
+    is_sqlite = isinstance(conn, sqlite3.Connection) or ("sqlite" in str(type(conn)).lower())
+    for tbl, col_name, mysql_def, sqlite_def in cols_to_add:
+        try:
+            col_def = sqlite_def if is_sqlite else mysql_def
+            cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_def}")
+            conn.commit()
+        except Exception:
+            # Column already exists or table structure up to date
+            pass
+    try:
+        cursor.close()
+    except Exception:
+        pass
 
 
 def initialize_database_from_file(sql_file_path: str) -> bool:
@@ -271,6 +304,7 @@ def initialize_database_from_file(sql_file_path: str) -> bool:
                 except Exception:
                     continue
             conn.commit()
+            _run_migrations(conn)
             cursor.close()
             conn.close()
             return True
@@ -282,11 +316,13 @@ def initialize_database_from_file(sql_file_path: str) -> bool:
         cursor = conn.cursor()
         cursor.executescript(_sqlite_schema())
         conn.commit()
+        _run_migrations(conn)
         cursor.close()
         conn.close()
         return True
     except Exception:
         return False
+
 
 
 def log_activity(activity_text: str):
@@ -305,6 +341,33 @@ def log_activity(activity_text: str):
 
 def _sqlite_schema() -> str:
     return """
+    CREATE TABLE IF NOT EXISTS Schema_Migrations (
+      migration_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      version TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      applied_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      checksum TEXT,
+      status TEXT DEFAULT 'SUCCESS'
+    );
+
+    CREATE TABLE IF NOT EXISTS Organizations (
+      organization_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      code TEXT UNIQUE NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS Schools (
+      school_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      code TEXT UNIQUE NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES Organizations(organization_id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS Admin_Login (
       admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -313,6 +376,7 @@ def _sqlite_schema() -> str:
     );
     CREATE TABLE IF NOT EXISTS Students (
       student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       class_section TEXT NOT NULL,
@@ -320,7 +384,8 @@ def _sqlite_schema() -> str:
       gender TEXT DEFAULT 'O',
       email TEXT,
       phone TEXT,
-      enrollment_date TEXT
+      enrollment_date TEXT,
+      FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE SET NULL
     );
     CREATE TABLE IF NOT EXISTS Learning_Objectives (
       objective_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -399,15 +464,53 @@ def _sqlite_schema() -> str:
       password_hash TEXT NOT NULL,
       role TEXT DEFAULT 'Teacher',
       status TEXT DEFAULT 'Active',
+      is_active INTEGER DEFAULT 1,
+      organization_id INTEGER,
+      school_id INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      last_login TEXT
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      last_login TEXT,
+      FOREIGN KEY (organization_id) REFERENCES Organizations(organization_id) ON DELETE SET NULL,
+      FOREIGN KEY (school_id) REFERENCES Schools(school_id) ON DELETE SET NULL
     );
     CREATE TABLE IF NOT EXISTS Notifications (
       notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER,
+      alert_type TEXT DEFAULT 'SYSTEM',
+      priority TEXT DEFAULT 'INFO',
       title TEXT NOT NULL,
       message TEXT NOT NULL,
-      priority TEXT DEFAULT 'SYSTEM',
       is_read INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      source TEXT DEFAULT 'Analytics Engine',
+      dedup_key TEXT,
+      action_status TEXT DEFAULT 'OPEN',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS Interventions (
+      intervention_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      risk_factor TEXT NOT NULL,
+      action_type TEXT DEFAULT 'Remedial Practice',
+      priority TEXT DEFAULT 'MEDIUM',
+      status TEXT DEFAULT 'PENDING',
+      assigned_date TEXT NOT NULL,
+      target_date TEXT,
+      completed_date TEXT,
+      teacher_notes TEXT,
+      pre_academic_score REAL,
+      post_academic_score REAL,
+      pre_attendance_rate REAL,
+      post_attendance_rate REAL,
+      pre_risk_score REAL,
+      post_risk_score REAL,
+      pre_lhs_score REAL,
+      post_lhs_score REAL,
+      effectiveness_score REAL,
+      effectiveness_tier TEXT,
+      FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
     );
     """
+

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
 {% block title %}PMLA-SCWE Reports & Exporters{% endblock %}
-{% block header_title %}Class Reports{% endblock %}
+{% block header_title %}PROFESSIONAL REPORT GENERATION ENGINE{% endblock %}
 
 {% block content %}
-<!-- Class statistics cards -->
-<div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 25px;">
+<!-- 1. Class-Wide KPI Overview Cards -->
+<div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 20px;">
   <div class="kpi-card glass">
     <span class="title">ACADEMIC CLASS AVG</span>
     <span class="value" style="color: #fff;">{{ "%.1f"|format(summary.avg_academic) }}%</span>
@@ -18,81 +18,208 @@
     <span class="title">CYBER-WELLNESS AVG</span>
     <span class="value" style="color: #fff;">{{ "%.1f"|format(summary.avg_wellness) }}%</span>
   </div>
+  <div class="kpi-card glass">
+    <span class="title">TOTAL REGISTERED</span>
+    <span class="value" style="color: var(--color-accent);">{{ summary.total_students }}</span>
+  </div>
 </div>
 
-<div class="dashboard-split" style="grid-template-columns: 1.2fr 1fr; align-items: start;">
-  <!-- Left Side: Risk Profile Distribution -->
-  <div class="panel glass" style="height: auto; padding: 25px;">
-    <h3>RISK DISTRIBUTION PROFILE</h3>
-    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
-        <span style="font-size: 13px; font-weight: 700; color: #fff;">LOW RISK Students</span>
-        <span style="font-size: 16px; font-weight: 800; color: #34A853;">{{ summary.risk_distribution.LOW or 0 }}</span>
+<!-- 2. Main Workspace Split: Configuration Form vs Live Preview -->
+<div class="dashboard-split" style="grid-template-columns: 360px 1fr; align-items: start; margin-bottom: 25px; gap: 20px;">
+  <!-- Left Side: Report Configuration Form -->
+  <div class="panel glass" style="height: auto; padding: 20px;">
+    <h3 style="font-size: 13px; font-weight: 800; margin-bottom: 14px;">REPORT CONFIGURATION</h3>
+
+    <form id="reportForm" action="{{ url_for('reports.export_pdf') }}" method="GET">
+      <!-- Report Type Selector -->
+      <div style="margin-bottom: 12px;">
+        <label for="reportTypeSelect" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">
+          Report Document Type:
+        </label>
+        <select name="report_type" id="reportTypeSelect" class="form-control" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+          {% for r_code, r_name in report_types %}
+            <option value="{{ r_code }}">{{ r_name }}</option>
+          {% endfor %}
+        </select>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
-        <span style="font-size: 13px; font-weight: 700; color: #fff;">MEDIUM RISK Students</span>
-        <span style="font-size: 16px; font-weight: 800; color: #FF7A00;">{{ summary.risk_distribution.MEDIUM or 0 }}</span>
+
+      <!-- Target Student Selector -->
+      <div id="studentSelectBox" style="margin-bottom: 12px;">
+        <label for="studentIdSelect" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">
+          Target Student:
+        </label>
+        <select name="student_id" id="studentIdSelect" class="form-control" style="width: 100%; font-size: 12px; padding: 7px 10px;">
+          {% for s in students %}
+            <option value="{{ s.student_id }}">#{{ s.student_id }} — {{ s.first_name }} {{ s.last_name }} ({{ s.class_section }})</option>
+          {% endfor %}
+        </select>
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-radius: 6px; background-color: var(--bg-secondary); border: 1px solid var(--border);">
-        <span style="font-size: 13px; font-weight: 700; color: #fff;">HIGH RISK Students</span>
-        <span style="font-size: 16px; font-weight: 800; color: #FF0000;">{{ summary.risk_distribution.HIGH or 0 }}</span>
+
+      <!-- Class & Section Filters -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+        <div>
+          <label for="classFilterSelect" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Class:</label>
+          <select name="class_name" id="classFilterSelect" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+            <option value="All">All Classes</option>
+            <option value="XII">Class XII</option>
+            <option value="XI">Class XI</option>
+            <option value="X">Class X</option>
+          </select>
+        </div>
+        <div>
+          <label for="secFilterSelect" style="display: block; font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">Section:</label>
+          <select name="section" id="secFilterSelect" class="form-control" style="width: 100%; font-size: 12px; padding: 6px;">
+            <option value="All">All Sections</option>
+            <option value="A">Section A</option>
+            <option value="B">Section B</option>
+            <option value="C">Section C</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Include AI Summary Toggle -->
+      <div style="margin-bottom: 16px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border);">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-primary); cursor: pointer; margin: 0;">
+          <input type="checkbox" name="include_ai_summary" value="1" id="includeAiCheck" checked style="accent-color: var(--color-accent);">
+          Include AI-Grounded Executive Briefing
+        </label>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="submit" class="btn btn-primary" id="btnDownloadPdf" style="padding: 10px; font-size: 12px; font-weight: 700;">
+          📄 Download PDF Document
+        </button>
+        <button type="button" class="btn" id="btnExportCsv" style="padding: 9px; font-size: 12px; font-weight: 700; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff;">
+          📊 Export Spreadsheet (CSV)
+        </button>
+      </div>
+    </form>
+
+    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border);">
+      <button class="btn" id="btnGenClassChart" style="width: 100%; font-size: 11px; padding: 8px; background: transparent; border: 1px solid var(--border); color: var(--text-secondary);">
+        📈 Plot Scatter Performance Map
+      </button>
+      <div id="chartRenderContainer" style="display: none; margin-top: 10px; text-align: center;">
+        <img id="renderedChartImg" src="" style="width: 100%; border-radius: 6px; border: 1px solid var(--border);" alt="Performance Map">
       </div>
     </div>
   </div>
 
-  <!-- Right Side: Export Utilities -->
-  <div class="panel glass" style="height: auto; padding: 25px;">
-    <h3>EXPORT UTILITIES</h3>
-    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-      <button class="btn btn-primary" id="btnGenClassChart" style="background-color: var(--bg-hover); color: #fff; border: 1px solid var(--border); font-size: 13px; padding: 12px;">Generate Class Performance Map</button>
-      <a href="{{ url_for('reports.export_csv') }}" class="btn btn-primary" style="font-size: 13px; padding: 12px;">Export Class Report (CSV)</a>
-      <a href="{{ url_for('reports.export_txt') }}" class="btn btn-primary" style="font-size: 13px; padding: 12px; background-color: #721c24; hover-background-color: #58151a;">Export Teacher Summary (Text)</a>
-      
-      <p id="actionStatusMsg" style="font-size: 12px; text-align: center; margin-top: 10px; font-weight: 700;"></p>
-      
-      <!-- Render dynamic performance map scatter chart -->
-      <div id="chartRenderContainer" style="display: none; text-align: center; margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
-        <span style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 10px;">GENERATED PERFORMANCE MAP SCATTER PLOT</span>
-        <img id="renderedChartImg" src="" style="width: 100%; border-radius: 6px; border: 1px solid var(--border);">
-      </div>
+  <!-- Right Side: Live Report Preview Panel -->
+  <div class="panel glass" style="height: auto; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="font-size: 13px; font-weight: 800; margin: 0;">DOCUMENT PREVIEW & VALIDATION</h3>
+      <span id="previewStatus" style="font-size: 11px; color: var(--text-secondary);">Live Preview Active</span>
+    </div>
+
+    <pre id="previewArea" style="background: var(--bg-secondary); color: var(--text-primary); padding: 15px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.5; max-height: 520px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;">
+Loading document preview...
+    </pre>
+
+    <div style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; font-style: italic;">
+      🛡️ Generated reports contain data-driven indicators intended to support teacher decision-making.
     </div>
   </div>
 </div>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const typeSelect = document.getElementById("reportTypeSelect");
+    const studentBox = document.getElementById("studentSelectBox");
+    const studentSelect = document.getElementById("studentIdSelect");
+    const classSelect = document.getElementById("classFilterSelect");
+    const secSelect = document.getElementById("secFilterSelect");
+    const previewArea = document.getElementById("previewArea");
+    const previewStatus = document.getElementById("previewStatus");
+    const csvBtn = document.getElementById("btnExportCsv");
+
+    function updateVisibility() {
+      const isStudent = (typeSelect.value === "STUDENT_INTELLIGENCE");
+      studentBox.style.display = isStudent ? "block" : "none";
+    }
+
+    function refreshPreview() {
+      previewStatus.textContent = "Refreshing preview...";
+      previewStatus.style.color = "var(--color-accent)";
+
+      const payload = {
+        report_type: typeSelect.value,
+        student_id: studentSelect.value ? parseInt(studentSelect.value) : null,
+        class_name: classSelect.value,
+        section: secSelect.value,
+        options: {
+          include_ai_summary: document.getElementById("includeAiCheck").checked
+        }
+      };
+
+      fetch("{{ url_for('reports.preview_report') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          previewArea.textContent = data.preview;
+          previewStatus.textContent = "Preview Updated";
+          previewStatus.style.color = "var(--color-success)";
+        } else {
+          previewArea.textContent = "Error: " + data.message;
+          previewStatus.textContent = "Preview Error";
+          previewStatus.style.color = "var(--color-danger)";
+        }
+      })
+      .catch(err => {
+        previewArea.textContent = "Connection error while generating preview.";
+        previewStatus.textContent = "Error";
+      });
+    }
+
+    typeSelect.addEventListener("change", () => {
+      updateVisibility();
+      refreshPreview();
+    });
+    studentSelect.addEventListener("change", refreshPreview);
+    classSelect.addEventListener("change", refreshPreview);
+    secSelect.addEventListener("change", refreshPreview);
+    document.getElementById("includeAiCheck").addEventListener("change", refreshPreview);
+
+    // CSV Download handler
+    csvBtn.addEventListener("click", () => {
+      const rtype = typeSelect.value;
+      const sid = studentSelect.value;
+      const c = classSelect.value;
+      const s = secSelect.value;
+      const url = `{{ url_for('reports.export_csv') }}?report_type=${encodeURIComponent(rtype)}&student_id=${encodeURIComponent(sid)}&class_name=${encodeURIComponent(c)}&section=${encodeURIComponent(s)}`;
+      window.location.href = url;
+    });
+
+    // Scatter chart plotter
     const genChartBtn = document.getElementById("btnGenClassChart");
     if (genChartBtn) {
       genChartBtn.addEventListener("click", () => {
-        const msg = document.getElementById("actionStatusMsg");
         const chartDiv = document.getElementById("chartRenderContainer");
         const chartImg = document.getElementById("renderedChartImg");
+        genChartBtn.textContent = "Plotting...";
 
-        msg.textContent = "Plotting scatter metrics...";
-        msg.style.color = "#fff";
-
-        fetch("{{ url_for('reports.generate_chart') }}", {
-          method: "POST"
-        })
+        fetch("{{ url_for('reports.generate_chart') }}", { method: "POST" })
         .then(res => res.json())
         .then(data => {
+          genChartBtn.textContent = "📈 Plot Scatter Performance Map";
           if (data.success) {
-            msg.textContent = data.message;
-            msg.style.color = "#34A853";
-            // Append timestamp query parameter to force image reload from cache
             chartImg.src = data.path + "?t=" + new Date().getTime();
             chartDiv.style.display = "block";
-          } else {
-            msg.textContent = data.message || "Failed to plot scatter metrics.";
-            msg.style.color = "#FF0000";
           }
         })
-        .catch(err => {
-          msg.textContent = "Error communicating with plotting modules.";
-          msg.style.color = "#FF0000";
+        .catch(() => {
+          genChartBtn.textContent = "📈 Plot Scatter Performance Map";
         });
       });
     }
+
+    updateVisibility();
+    refreshPreview();
   });
 </script>
 {% endblock %}

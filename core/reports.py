@@ -1,4 +1,4 @@
-"""Report generation and data export services."""
+"""Report generation and data export facade delegating to core.report_service."""
 
 from __future__ import annotations
 import csv
@@ -7,6 +7,15 @@ from datetime import datetime
 from .database import execute_select
 from .analytics import get_student_analytics_summary
 from . import recommendation
+from . import report_service
+
+
+# Export report service constants and functions
+REPORT_TYPES = report_service.REPORT_TYPES
+generate_student_pdf_report = report_service.generate_student_pdf_report
+generate_class_pdf_report = report_service.generate_class_pdf_report
+export_report_csv = report_service.export_report_csv
+generate_report_preview_text = report_service.generate_report_preview_text
 
 
 def get_class_summary_data() -> dict:
@@ -58,138 +67,87 @@ def build_student_report(student_summary: dict) -> str:
     """Formats a structured, human-readable student performance text report."""
     insights = recommendation.explain_learning_insights(student_summary)
     plan = recommendation.generate_intervention_plan(student_summary)
-    
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    report = []
-    report.append("======================================================================")
-    report.append("                   PMLA-SCWE STUDENT PERFORMANCE REPORT")
-    report.append("======================================================================")
-    report.append(f"Report Generated At : {timestamp}")
-    report.append(f"Student ID          : {student_summary['student_id']}")
-    report.append(f"Student Name        : {student_summary['student_name']}")
-    report.append(f"Class/Section       : {student_summary['class_section']}")
-    report.append("----------------------------------------------------------------------")
-    report.append("KEY ANALYTICS SUMMARY")
-    report.append("----------------------------------------------------------------------")
-    report.append(f"Academic Average Score : {student_summary['academic_average']:.2f}% ({student_summary['academic_status']})")
-    report.append(f"Attendance Rate        : {student_summary['attendance_percentage']:.2f}% ({student_summary['attendance_status']})")
-    report.append(f"Cyber-Wellness Index   : {student_summary['cyber_wellness_score']:.2f}% ({student_summary['wellness_status']})")
-    report.append(f"Weekly Progress Trend  : {student_summary['trend']} (Current: {student_summary['current_score']:.2f}%)")
-    report.append(f"Learning Health Score  : {student_summary['learning_health_score']:.2f}/100")
-    report.append(f"Risk Classification    : {student_summary['risk_level']}")
-    if student_summary['risk_reasons']:
+    report = [
+        "======================================================================",
+        "                   PMLA-SCWE STUDENT PERFORMANCE REPORT",
+        "======================================================================",
+        f"Report Generated At : {timestamp}",
+        f"Student ID          : {student_summary['student_id']}",
+        f"Student Name        : {student_summary['student_name']}",
+        f"Class/Section       : {student_summary['class_section']}",
+        "----------------------------------------------------------------------",
+        "KEY ANALYTICS SUMMARY",
+        "----------------------------------------------------------------------",
+        f"Academic Average Score : {student_summary['academic_average']:.2f}% ({student_summary['academic_status']})",
+        f"Attendance Rate        : {student_summary['attendance_percentage']:.2f}% ({student_summary['attendance_status']})",
+        f"Cyber-Wellness Index   : {student_summary['cyber_wellness_score']:.2f}% ({student_summary['wellness_status']})",
+        f"Weekly Progress Trend  : {student_summary['trend']} (Current: {student_summary['current_score']:.2f}%)",
+        f"Learning Health Score  : {student_summary['learning_health_score']:.2f}/100",
+        f"Risk Classification    : {student_summary['risk_level']}"
+    ]
+    if student_summary.get('risk_reasons'):
         report.append(f"Flagged Reasons        : {', '.join(student_summary['risk_reasons'])}")
-    report.append("----------------------------------------------------------------------")
-    report.append("EXPLAINABLE INSIGHTS")
-    report.append("----------------------------------------------------------------------")
+    report.extend([
+        "----------------------------------------------------------------------",
+        "EXPLAINABLE INSIGHTS",
+        "----------------------------------------------------------------------"
+    ])
     for ins in insights:
         report.append(f"- {ins}")
-    report.append("----------------------------------------------------------------------")
-    report.append("PERSONALIZED INTERVENTION CHECKLIST")
-    report.append("----------------------------------------------------------------------")
+    report.extend([
+        "----------------------------------------------------------------------",
+        "PERSONALIZED INTERVENTION CHECKLIST",
+        "----------------------------------------------------------------------"
+    ])
     for item in plan:
         report.append(f"[ ] {item}")
     report.append("======================================================================")
-    
     return "\n".join(report)
 
 
 def build_teacher_report(class_summary: dict) -> str:
     """Formats a structured, human-readable class-wide performance text report."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    report = []
-    report.append("======================================================================")
-    report.append("                     PMLA-SCWE CLASS ANALYTICS REPORT")
-    report.append("======================================================================")
-    report.append(f"Report Generated At    : {timestamp}")
-    report.append(f"Total Enrolled Students : {class_summary['total_students']}")
-    report.append("----------------------------------------------------------------------")
-    report.append("CLASS AVERAGES")
-    report.append("----------------------------------------------------------------------")
-    report.append(f"Academic Performance Avg : {class_summary['avg_academic']:.2f}%")
-    report.append(f"Attendance Rate Avg      : {class_summary['avg_attendance']:.2f}%")
-    report.append(f"Cyber-Wellness Index Avg : {class_summary['avg_wellness']:.2f}%")
-    report.append("----------------------------------------------------------------------")
-    report.append("RISK DISTRIBUTION PROFILE")
-    report.append("----------------------------------------------------------------------")
-    risk = class_summary["risk_distribution"]
-    report.append(f"LOW RISK students        : {risk.get('LOW', 0)}")
-    report.append(f"MEDIUM RISK students     : {risk.get('MEDIUM', 0)}")
-    report.append(f"HIGH RISK students       : {risk.get('HIGH', 0)}")
-    report.append("======================================================================")
-    
+    report = [
+        "======================================================================",
+        "                     PMLA-SCWE CLASS ANALYTICS REPORT",
+        "======================================================================",
+        f"Report Generated At     : {timestamp}",
+        f"Total Enrolled Students : {class_summary['total_students']}",
+        "----------------------------------------------------------------------",
+        "CLASS AVERAGES",
+        "----------------------------------------------------------------------",
+        f"Academic Performance Avg : {class_summary['avg_academic']:.2f}%",
+        f"Attendance Rate Avg      : {class_summary['avg_attendance']:.2f}%",
+        f"Cyber-Wellness Index Avg : {class_summary['avg_wellness']:.2f}%",
+        "----------------------------------------------------------------------",
+        "RISK DISTRIBUTION PROFILE",
+        "----------------------------------------------------------------------"
+    ]
+    risk = class_summary.get("risk_distribution", {})
+    report.extend([
+        f"LOW RISK students        : {risk.get('LOW', 0)}",
+        f"MEDIUM RISK students     : {risk.get('MEDIUM', 0)}",
+        f"HIGH RISK students       : {risk.get('HIGH', 0)}",
+        "======================================================================"
+    ])
     return "\n".join(report)
 
 
 def export_student_report_csv(student_id: int) -> str:
     """Exports a single student report as a CSV file and returns the filepath."""
-    summary = get_student_analytics_summary(student_id)
-    if not summary:
-        raise ValueError(f"Student ID {student_id} not found.")
-
-    os.makedirs("reports", exist_ok=True)
-    filepath = f"reports/student_{student_id}_report.csv"
-
-    # Define headers
-    headers = [
-        "Metric", "Value", "Status"
-    ]
-    rows = [
-        ["Student ID", summary["student_id"], ""],
-        ["Student Name", summary["student_name"], ""],
-        ["Class Section", summary["class_section"], ""],
-        ["Academic Average (%)", f"{summary['academic_average']:.2f}", summary["academic_status"]],
-        ["Attendance (%)", f"{summary['attendance_percentage']:.2f}", summary["attendance_status"]],
-        ["Cyber-Wellness Score (%)", f"{summary['cyber_wellness_score']:.2f}", summary["wellness_status"]],
-        ["Learning Health Score", f"{summary['learning_health_score']:.2f}", ""],
-        ["Risk Level", summary["risk_level"], ""],
-        ["Risk Reasons", ", ".join(summary["risk_reasons"]), ""],
-        ["Predicted Next Score (%)", f"{summary['predicted_next_score']:.2f}", ""],
-        ["Trend Direction", summary["trend"], ""]
-    ]
-
-    with open(filepath, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
-        writer.writerows(rows)
-
-    return filepath
+    return report_service.export_report_csv(
+        report_type=report_service.REPORT_TYPE_STUDENT_INTELLIGENCE,
+        student_id=student_id
+    )
 
 
 def export_class_report_csv() -> str:
     """Exports the entire class report as a CSV file and returns the filepath."""
-    os.makedirs("reports", exist_ok=True)
-    filepath = "reports/class_report.csv"
-
-    rows = execute_select("SELECT student_id FROM Students ORDER BY student_id")
-    
-    headers = [
-        "Student ID", "Student Name", "Class Section", 
-        "Academic Average", "Attendance Rate", "Cyber-Wellness Score", 
-        "Learning Health Score", "Risk Level"
-    ]
-
-    records = []
-    for r in rows:
-        summary = get_student_analytics_summary(r["student_id"])
-        if not summary:
-            continue
-        records.append([
-            summary["student_id"],
-            summary["student_name"],
-            summary["class_section"],
-            round(summary["academic_average"], 2),
-            round(summary["attendance_percentage"], 2),
-            round(summary["cyber_wellness_score"], 2),
-            round(summary["learning_health_score"], 2),
-            summary["risk_level"]
-        ])
-
-    with open(filepath, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
-        writer.writerows(records)
-
-    return filepath
+    return report_service.export_report_csv(
+        report_type=report_service.REPORT_TYPE_CLASS_PERFORMANCE,
+        class_name="All",
+        section="All"
+    )

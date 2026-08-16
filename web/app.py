@@ -15,6 +15,8 @@ from .routes.assessments import assessments_bp
 from .routes.wellness import wellness_bp
 from .routes.reports import reports_bp
 from .routes.settings import settings_bp
+from .routes.interventions import interventions_bp
+from .routes.notifications import notifications_bp
 
 
 def create_app() -> Flask:
@@ -34,6 +36,10 @@ def create_app() -> Flask:
     app.register_blueprint(wellness_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(interventions_bp)
+    app.register_blueprint(notifications_bp)
+
+
 
     @app.context_processor
     def inject_notifications():
