@@ -65,10 +65,23 @@ If you prefer to perform the setup commands step-by-step:
    - **Online**: `pip install -r requirements.txt`
    - **Offline**: `pip install --no-index --find-links=./wheels -r requirements.txt`
 4. **Initialize & Seed Database**:
-   ```powershell
-   python seed_database.py
-   ```
-   *Note: Add `--reset` if you wish to wipe the database and generate 100 mock students.*
+   - **Verify / Initialize Schema Only**:
+     ```powershell
+     python seed_database.py
+     ```
+   - **Populate 100 Demonstration Students** (with attendance, grades, wellness, risk trends):
+     ```powershell
+     python seed_database.py --reset
+     ```
+   - **Remove / Wipe All Demonstration Students** (clean empty state with `@admin` preserved):
+     ```powershell
+     python seed_database.py --wipe
+     ```
+   - **Seed Custom Student Count** (e.g. 50 students):
+     ```powershell
+     python seed_database.py --reset --count 50
+     ```
+   *(Add `-y` to skip confirmation prompts: e.g. `python seed_database.py --reset -y`)*
 5. **Run the Application**:
    - To launch **Desktop GUI**: `python main.py`
    - To launch **Flask Web Server**: `python main.py --web`

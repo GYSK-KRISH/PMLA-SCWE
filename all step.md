@@ -25,18 +25,35 @@ Instead of running setup, dependency checks, database seeding, and application l
 
 ---
 
-### Step 2: Populating Clean Mock Data (Optional)
-If you want to demonstrate predictive regression trends and dashboards with a pre-seeded set of 100 sample student records:
+### Step 2: Populating & Managing Demonstration Mock Data
+
+#### A. Adding 100 Demonstration Students
+If you want to demonstrate predictive regression trends, risk engines, and analytics dashboards with a pre-seeded set of 100 sample student records:
 - **Action**: Run the seeder with the reset flag:
   ```powershell
   python seed_database.py --reset
   ```
+  *(Type `YES` when prompted, or pass `-y` to skip the prompt: `python seed_database.py --reset -y`)*
 - **Under the Hood**:
-  - Deletes any existing data and resets AUTO_INCREMENT ID counters.
-  - Generates exactly 100 mock students.
-  - Seeds 10 days of attendance logs per student.
+  - Wipes any existing student data and resets AUTO_INCREMENT ID counters to 1.
+  - Generates 100 mock students with diverse attendance streaks (present/absent).
   - Logs 4 weeks of progress test scores per student (declining, improving, or stable linear trends).
-  - Adds cyber wellness audits, learning health records, and initial notifications.
+  - Adds cyber wellness audits, learning health records, milestone alerts, and teacher interventions.
+
+#### B. Removing / Wiping Demonstration Data (Clean Empty State)
+When you are done with the demonstration and want a clean, empty production database (with only the `@admin` account and learning objectives preserved):
+- **Action**: Run the seeder with the wipe flag:
+  ```powershell
+  python seed_database.py --wipe
+  ```
+  *(Type `YES` when prompted, or pass `-y` to skip the prompt: `python seed_database.py --wipe -y`)*
+
+#### C. Custom Demonstration Student Count
+To seed a custom number of students (e.g., 50 students):
+```powershell
+python seed_database.py --reset --count 50
+```
+
 
 
 ---
