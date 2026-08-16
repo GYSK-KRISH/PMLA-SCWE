@@ -164,7 +164,7 @@
             {% if session.get('role') == 'Admin' %}
               <a href="{{ url_for('settings.users') }}" role="menuitem">👥 User Management</a>
             {% endif %}
-            <a href="{{ url_for('settings.notifications_view') }}" role="menuitem">🔔 Notifications</a>
+            <a href="{{ url_for('notifications.view_notifications') }}" role="menuitem">🔔 Notifications</a>
             <hr class="dropdown-sep">
             <a href="{{ url_for('auth.logout') }}" class="dropdown-logout" role="menuitem">🚪 Logout</a>
           </div>

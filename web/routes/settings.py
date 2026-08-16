@@ -130,25 +130,3 @@ def delete_user(user_id):
         
     return redirect(url_for("settings.users"))
 
-
-@settings_bp.route("/notifications")
-def notifications_view():
-    db_status = get_db_status()
-    # Auto-generate latest scan alerts
-    notification_service.generate_system_alerts()
-    notifs = notification_service.get_notifications()
-    unread_cnt = notification_service.get_unread_notification_count()
-    
-    return render_template(
-        "notifications.html",
-        active_tab="notifications",
-        db_status=db_status,
-        unread_cnt=unread_cnt,
-        notifications=notifs
-    )
-
-
-@settings_bp.route("/notifications/read/<int:nid>")
-def read_notification(nid):
-    notification_service.mark_notification_as_read(nid)
-    return redirect(url_for("settings.notifications_view"))

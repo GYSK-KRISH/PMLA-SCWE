@@ -309,3 +309,12 @@ def scan_and_generate_smart_alerts() -> dict[str, int]:
                 skipped_cnt += 1
 
     return {"created": created_cnt, "skipped_duplicates": skipped_cnt}
+
+
+def generate_system_alerts() -> dict[str, int]:
+    """Scans student records and generates automated system decision-support alerts.
+    
+    Alias for scan_and_generate_smart_alerts() to maintain seamless compatibility.
+    """
+    return scan_and_generate_smart_alerts()
+
