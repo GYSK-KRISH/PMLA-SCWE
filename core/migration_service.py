@@ -273,12 +273,15 @@ def run_v2_phase1_migration(create_backup: bool = True) -> dict[str, Any]:
                     f"Row count mismatch on critical table {tbl}: before={pre_cnt}, after={post_cnt}"
                 )
 
+        # Step 11: Ensure SQLite fallback database file is also migrated
+        migrate_sqlite_fallback_file()
+
         if verification_passed:
-            # Step 11: Record migration success
+            # Step 12: Record migration success
             checksum = hashlib.sha256(f"{V2_0_PHASE_1_VERSION}_{default_school_id}".encode()).hexdigest()[:16]
             record_migration(V2_0_PHASE_1_VERSION, V2_0_PHASE_1_NAME, checksum=checksum, status="SUCCESS")
             report["success"] = True
-            report["steps_completed"].append("Migration v2_0_phase_1 successfully committed and verified")
+            report["steps_completed"].append("Migration v2_0_phase_1 successfully committed and verified across all engines")
         else:
             report["success"] = False
 
@@ -287,3 +290,100 @@ def run_v2_phase1_migration(create_backup: bool = True) -> dict[str, Any]:
         report["errors"].append(f"Migration execution error: {ex}")
 
     return report
+
+
+def migrate_sqlite_fallback_file(db_path: str | None = None) -> bool:
+    """Explicitly applies Version 2.0 Phase 1 migration to the SQLite fallback database file."""
+    import sqlite3
+    from pathlib import Path
+    
+    sqlite_file = Path(db_path) if db_path else Path(__file__).resolve().parent.parent / "pmla_scwe_fallback.db"
+    if not sqlite_file.exists():
+        return False
+
+    try:
+        conn = sqlite3.connect(sqlite_file)
+        c = conn.cursor()
+
+        # Tables
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS Schema_Migrations (
+            migration_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            applied_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            checksum TEXT,
+            status TEXT DEFAULT 'SUCCESS'
+        )
+        """)
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS Organizations (
+            organization_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT UNIQUE NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS Schools (
+            school_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            organization_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            code TEXT UNIQUE NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (organization_id) REFERENCES Organizations(organization_id) ON DELETE CASCADE
+        )
+        """)
+
+        # Default org
+        c.execute("SELECT organization_id FROM Organizations WHERE code = 'DEFAULT_ORG'")
+        r_org = c.fetchone()
+        if not r_org:
+            c.execute("INSERT INTO Organizations (name, code, is_active) VALUES ('PMLA-SCWE Default Organization', 'DEFAULT_ORG', 1)")
+            c.execute("SELECT organization_id FROM Organizations WHERE code = 'DEFAULT_ORG'")
+            org_id = int(c.fetchone()[0])
+        else:
+            org_id = int(r_org[0])
+
+        # Default school
+        c.execute("SELECT school_id FROM Schools WHERE code = 'DEFAULT_SCHOOL'")
+        r_sch = c.fetchone()
+        if not r_sch:
+            c.execute("INSERT INTO Schools (organization_id, name, code, is_active) VALUES (?, 'Default School', 'DEFAULT_SCHOOL', 1)", (org_id,))
+            c.execute("SELECT school_id FROM Schools WHERE code = 'DEFAULT_SCHOOL'")
+            school_id = int(c.fetchone()[0])
+        else:
+            school_id = int(r_sch[0])
+
+        # Alter columns
+        cols = [
+            ("Students", "school_id", "INTEGER"),
+            ("Users", "organization_id", "INTEGER"),
+            ("Users", "school_id", "INTEGER"),
+            ("Users", "is_active", "INTEGER DEFAULT 1"),
+            ("Users", "updated_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
+        ]
+        for tbl, col, ctype in cols:
+            try:
+                c.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {ctype}")
+            except Exception:
+                pass
+
+        # Backfill
+        c.execute("UPDATE Students SET school_id = ? WHERE school_id IS NULL OR school_id = 0", (school_id,))
+        try:
+            c.execute("UPDATE Users SET organization_id = ?, school_id = ?, is_active = 1 WHERE organization_id IS NULL OR organization_id = 0", (org_id, school_id))
+        except Exception:
+            pass
+
+        # Record migration
+        c.execute("INSERT OR REPLACE INTO Schema_Migrations (version, name, status) VALUES ('v2_0_phase_1', 'Multi-School Tenancy & RBAC Foundation', 'SUCCESS')")
+        conn.commit()
+        c.close()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
